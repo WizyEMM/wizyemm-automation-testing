@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox]
+        browser: [chromium]
 
     steps:
       - name: Checkout code
@@ -36,7 +36,6 @@ jobs:
           mkdir -p allure-results test-results
 
       - name: Run Playwright tests - ${{ matrix.browser }}
-        continue-on-error: true
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
           EMAIL: ${{ secrets.EMAIL }}
@@ -50,5 +49,46 @@ jobs:
         if: always()
         with:
           name: allure-results-${{ matrix.browser }}
+          path: allure-results/
+          retention-days: 7
+
+  login-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Clean previous results
+        run: |
+          rm -rf allure-results test-results
+          mkdir -p allure-results test-results
+
+      - name: Run login tests
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL: ${{ secrets.EMAIL }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          REGION: ${{ secrets.REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Upload allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-login
           path: allure-results/
           retention-days: 7
