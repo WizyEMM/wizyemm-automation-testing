@@ -1,0 +1,33 @@
+{
+  "name": "wizyemm-automation-testing",
+  "version": "1.0.0",
+  "description": "This README would normally document whatever steps are necessary to get your application up and running.",
+  "main": "index.js",
+  "scripts": {
+    "clean:allure": "if exist allure-results (echo Deleting allure-results && rd /s /q allure-results) else (echo allure-results folder does not exist)",
+    "test:staging": "cross-env TEST_ENV=staging HEADLESS=false npx playwright test --project=chromium",
+    "test:prod": "cross-env TEST_ENV=production HEADLESS=false npx playwright test --project=chromium",
+    "test:dev": "cross-env TEST_ENV=development HEADLESS=false npx playwright test --project=chromium",
+    "allure:history": "node scripts/prepare-allure-history.js",
+    "allure:report": "npm run allure:history && allure generate --clean && allure open"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/Wizyio/wizyemm-automation-testing.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://bitbucket.org/Wizyio/wizyemm-automation-testing/issues"
+  },
+  "homepage": "https://bitbucket.org/Wizyio/wizyemm-automation-testing#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.0.10",
+    "allure-commandline": "^2.34.1",
+    "allure-playwright": "^3.4.2",
+    "cross-env": "^7.0.3",
+    "dotenv": "^17.2.0"
+  }
+}
