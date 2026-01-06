@@ -37,6 +37,12 @@ jobs:
 
       - name: Run Playwright tests - ${{ matrix.browser }}
         continue-on-error: true
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL: ${{ secrets.EMAIL }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          REGION: ${{ secrets.REGION }}
         run: npx playwright test tests/application --project=${{ matrix.browser }} --reporter=line,allure-playwright
 
       - name: Upload allure results
