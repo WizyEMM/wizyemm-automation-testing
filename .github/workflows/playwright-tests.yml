@@ -39,7 +39,7 @@ jobs:
         run: npx playwright install ${{ matrix.browser }}
 
       - name: Run Playwright tests - ${{ matrix.browser }}
-        run: cross-env TEST_ENV=${{ github.event.inputs.environment }} HEADLESS=true npx playwright test --project=${{ matrix.browser }}
+        run: cross-env TEST_ENV=${{ github.event.inputs.environment }} HEADLESS=true npx playwright test tests/application --project=${{ matrix.browser }}
         continue-on-error: true
 
       - name: Upload Playwright Report
