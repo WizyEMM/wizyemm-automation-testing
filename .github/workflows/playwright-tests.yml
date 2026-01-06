@@ -1,21 +1,14 @@
-name: Playwright Tests - Manual Trigger
+name: Playwright Tests - Auto Trigger
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Select test environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-          - development
+  push:
+    branches:
+      - pipeline/release
+      - pipeline/**
 
 jobs:
   test:
-    name: Test - ${{ matrix.browser }} - ${{ github.event.inputs.environment }}
+    name: Test - ${{ matrix.browser }} - staging
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,14 +32,14 @@ jobs:
         run: npx playwright install ${{ matrix.browser }}
 
       - name: Run Playwright tests - ${{ matrix.browser }}
-        run: cross-env TEST_ENV=${{ github.event.inputs.environment }} HEADLESS=true npx playwright test tests/application --project=${{ matrix.browser }}
+        run: cross-env TEST_ENV=staging HEADLESS=true npx playwright test tests/application --project=${{ matrix.browser }}
         continue-on-error: true
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report-${{ matrix.browser }}-${{ github.event.inputs.environment }}
+          name: playwright-report-${{ matrix.browser }}-staging
           path: playwright-report/
           retention-days: 30
 
@@ -54,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: allure-results-${{ matrix.browser }}-${{ github.event.inputs.environment }}
+          name: allure-results-${{ matrix.browser }}-staging
           path: allure-results/
           retention-days: 30
 
@@ -62,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-videos-${{ matrix.browser }}-${{ github.event.inputs.environment }}
+          name: test-videos-${{ matrix.browser }}-staging
           path: test-results/
           retention-days: 30
 
