@@ -19,6 +19,15 @@ export class LanguageSwitch {
     return this.page.getByRole("menuitem", { name: menuItemText });
   }
 
+  async isLanguageAvailable(languageMenuItem: string): Promise<boolean> {
+    try {
+      const menuItem = this.getLanguageMenuItem(languageMenuItem);
+      return await menuItem.isVisible({ timeout: 5000 });
+    } catch {
+      return false;
+    }
+  }
+
   async switchLanguage(
     currentLanguage: string,
     targetLanguageMenuItem: string
