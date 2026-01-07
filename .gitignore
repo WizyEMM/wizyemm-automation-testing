@@ -67,5 +67,8 @@ allure-results/
 allure-report/
 
 .history
-.github/
 .vscode/
+
+# Allow workflows directory in .github
+!.github/
+!.github/workflows/
