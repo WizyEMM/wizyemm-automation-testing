@@ -53,7 +53,7 @@ export class LanguageSwitch {
   async resetLanguageToEnglish() {
     try {
       // Get current language from button text content
-      const currentLangButton = this.page.locator('button').filter({ hasText: /^(English|Français|日本語|Español|Deutsch|中文)$/ }).first();
+      const currentLangButton = this.page.locator('button').filter({ hasText: /^(English|Français|Bahasa Indonesia|日本語|Español|ไทย|Deutsch|中文)$/ }).first();
       const currentLang = await currentLangButton.textContent();
       
       if (currentLang && currentLang !== "English") {
