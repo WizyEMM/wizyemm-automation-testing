@@ -19,6 +19,19 @@ test.describe("Language Switching", () => {
     }) => {
       const languagePage = new LanguageSwitchPage(page);
       
+      // If language is optional, check if it's available first
+      if (languageSwitch.isOptional) {
+        const isAvailable = await languagePage.isLanguageAvailable(
+          languageSwitch.toLanguageMenuItem
+        );
+        
+        // Skip test if optional language is not available
+        if (!isAvailable) {
+          test.skip();
+          return;
+        }
+      }
+      
       await languagePage.switchLanguageAndVerify(
         languageSwitch.fromLanguage,
         languageSwitch.toLanguageMenuItem,

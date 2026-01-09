@@ -19,6 +19,15 @@ export class LanguageSwitch {
     return this.page.getByRole("menuitem", { name: menuItemText });
   }
 
+  async isLanguageAvailable(languageMenuItem: string): Promise<boolean> {
+    try {
+      const menuItem = this.getLanguageMenuItem(languageMenuItem);
+      return await menuItem.isVisible({ timeout: 5000 });
+    } catch {
+      return false;
+    }
+  }
+
   async switchLanguage(
     currentLanguage: string,
     targetLanguageMenuItem: string
@@ -44,7 +53,7 @@ export class LanguageSwitch {
   async resetLanguageToEnglish() {
     try {
       // Get current language from button text content
-      const currentLangButton = this.page.locator('button').filter({ hasText: /^(English|Français|日本語|Español|Deutsch|中文)$/ }).first();
+      const currentLangButton = this.page.locator('button').filter({ hasText: /^(English|Français|Bahasa Indonesia|日本語|Español|ไทย|Deutsch|中文)$/ }).first();
       const currentLang = await currentLangButton.textContent();
       
       if (currentLang && currentLang !== "English") {
