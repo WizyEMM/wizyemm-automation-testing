@@ -3,8 +3,20 @@ name: Playwright Tests
 on:
   push:
     branches:
-      - pipeline/release
-      - pipeline/**
+      - main
+      - development
+      - slackbot/integration
+    
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_title:
+        description: 'Release title from Jira'
+        required: false
+        type: string
+
 
 jobs:
   # test:
@@ -92,3 +104,18 @@ jobs:
           name: allure-results-login
           path: allure-results/
           retention-days: 7
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          npm install -g allure-commandline
+          allure generate allure-results -o allure-report
+
+      - name: Send Test Report to Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+        run: |
+          npm install node-fetch
+          node scripts/slack-reporter.js

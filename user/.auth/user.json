@@ -1,0 +1,101 @@
+{
+  "cookies": [
+    {
+      "name": "_csrf",
+      "value": "O7wSdHmIA8n5umHuZovtRg0Q",
+      "domain": "staging-wizyemm.us.auth0.com",
+      "path": "/usernamepassword/login",
+      "expires": 1768630277.252477,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "did",
+      "value": "s%3Av0%3Ae5816c68-448b-434f-a40a-141281feb84c.96P13Vt6ZlpcbZRwyBwHOCE%2BOesjaVXLzZswnmMcdMg",
+      "domain": "staging-wizyemm.us.auth0.com",
+      "path": "/",
+      "expires": 1799323876.930832,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "did_compat",
+      "value": "s%3Av0%3Ae5816c68-448b-434f-a40a-141281feb84c.96P13Vt6ZlpcbZRwyBwHOCE%2BOesjaVXLzZswnmMcdMg",
+      "domain": "staging-wizyemm.us.auth0.com",
+      "path": "/",
+      "expires": 1799323876.931576,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "auth0",
+      "value": "s%3AdMsXoEMip1lnU6pmIgPjyIjyXAvfZTsO.aaZ0S35A8HE3W%2F7VZm3a%2BOd3naDkz%2FcrG3aQEnBeAbE",
+      "domain": "staging-wizyemm.us.auth0.com",
+      "path": "/",
+      "expires": 1768025481.446563,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "auth0_compat",
+      "value": "s%3AdMsXoEMip1lnU6pmIgPjyIjyXAvfZTsO.aaZ0S35A8HE3W%2F7VZm3a%2BOd3naDkz%2FcrG3aQEnBeAbE",
+      "domain": "staging-wizyemm.us.auth0.com",
+      "path": "/",
+      "expires": 1768025481.446709,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_legacy_auth0.5Fcwn3lvMQk6XHb5M0gt2MBzhyKpiLI9.is.authenticated",
+      "value": "true",
+      "domain": "qa-automation.staging-us.wizyemm.app",
+      "path": "/",
+      "expires": 1767852683,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "auth0.5Fcwn3lvMQk6XHb5M0gt2MBzhyKpiLI9.is.authenticated",
+      "value": "true",
+      "domain": "qa-automation.staging-us.wizyemm.app",
+      "path": "/",
+      "expires": 1767852683,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://qa-automation.staging-us.wizyemm.app",
+      "localStorage": [
+        {
+          "name": "lscache-WizyEMM-User",
+          "value": "{\"given_name\":\"Vincent\",\"family_name\":\"Automation\",\"nickname\":\"automationemm\",\"name\":\"Vincent Automation\",\"picture\":\"https://s.gravatar.com/avatar/579a4dcf807d94faa50fbf3250643eff?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fva.png\",\"updated_at\":\"2026-01-07T06:11:21.278Z\",\"email\":\"automationemm@yopmail.com\",\"email_verified\":true,\"sub\":\"auth0|690ac7027f482752bed74c98\"}"
+        },
+        {
+          "name": "@@auth0spajs@@::5Fcwn3lvMQk6XHb5M0gt2MBzhyKpiLI9::https://wizyemm.eu/api::openid profile email offline_access",
+          "value": "{\"body\":{\"access_token\":\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhzSm91Y0tjam1VVkFMT2ZKSUFhMiJ9.eyJodHRwczovL3dpenllbW0vcGVybWlzc2lvbnMiOnt9LCJodHRwczovL3dpenllbW0vaWRlbnRpdGllcyI6WyJhdXRoMHw2OTBhYzcwMjdmNDgyNzUyYmVkNzRjOTgiXSwiaHR0cHM6Ly93aXp5ZW1tL2VtYWlsIjoiYXV0b21hdGlvbmVtbUB5b3BtYWlsLmNvbSIsImlzcyI6Imh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS8iLCJzdWIiOiJhdXRoMHw2OTBhYzcwMjdmNDgyNzUyYmVkNzRjOTgiLCJhdWQiOlsiaHR0cHM6Ly93aXp5ZW1tLmV1L2FwaSIsImh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3Njc3NjYyODUsImV4cCI6MTc2Nzg1MjY4NSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImF6cCI6IjVGY3duM2x2TVFrNlhIYjVNMGd0Mk1Cemh5S3BpTEk5In0.isk622bSviC9qZ7t2_MtQI40BVm7-jgBd83k8PgQmjoAOwsjaxdoY5tXyu-hQDFfLrkfGR7uwkkTDRetgENMNKnvYgpIudLmDKOGcA-nitug5XFKP261flZEQCRZ6sLSlOd9D8gc-FicAQrIJrfkcYDglo89SmDKcFYWfbc8iav7ErRpFK-agqqVPagzR5XIfWLE4evBcRnWGjos1ZJ3DhQrw8Al3kfw5L5hfukxf9v66pxJYOsj7t0L_kaOB1uJ6M2hI-a4sWuekLioBxe1H6qx8sWgqG9vOkTvdvpZj-z4LMnmsUskShvn0nCQgbduO9ZVaMD_ZdIybO9JeGHnUg\",\"id_token\":\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhzSm91Y0tjam1VVkFMT2ZKSUFhMiJ9.eyJnaXZlbl9uYW1lIjoiVmluY2VudCIsImZhbWlseV9uYW1lIjoiQXV0b21hdGlvbiIsIm5pY2tuYW1lIjoiYXV0b21hdGlvbmVtbSIsIm5hbWUiOiJWaW5jZW50IEF1dG9tYXRpb24iLCJwaWN0dXJlIjoiaHR0cHM6Ly9zLmdyYXZhdGFyLmNvbS9hdmF0YXIvNTc5YTRkY2Y4MDdkOTRmYWE1MGZiZjMyNTA2NDNlZmY_cz00ODAmcj1wZyZkPWh0dHBzJTNBJTJGJTJGY2RuLmF1dGgwLmNvbSUyRmF2YXRhcnMlMkZ2YS5wbmciLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wN1QwNjoxMToyMS4yNzhaIiwiZW1haWwiOiJhdXRvbWF0aW9uZW1tQHlvcG1haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS8iLCJhdWQiOiI1RmN3bjNsdk1RazZYSGI1TTBndDJNQnpoeUtwaUxJOSIsInN1YiI6ImF1dGgwfDY5MGFjNzAyN2Y0ODI3NTJiZWQ3NGM5OCIsImlhdCI6MTc2Nzc2NjI4NSwiZXhwIjoxNzY3NzY5ODg1LCJzaWQiOiIwbzJPWDZzVXNNMmVCNXhnLUo3TXdRZXRjallKMzYxWiIsImF1dGhfdGltZSI6MTc2Nzc2NjI4MSwibm9uY2UiOiJaV1Z1VEdSTlVXdFRiV3BTZmt3eE1VTlFlaTV5T1hrMlkycG1aRU56YTFWNFNFOHVZMHh4VWtocVF3PT0ifQ.vvVdJ3BTEgJ7JkkLhhHwPkUSkngZ9bGJkSqV07ppW5GHwoh_-nN8KLgo4H8ehyASaDaXgnIRbwAmAX_u8aMNFI7ti1wCzcbsiBiU6jDtBCL0W3JGsyrGegAofh_YZJjmxvD0BTz9mw368RUfi7dtEXCLAEXiugCYlbg7DSTHBJE4DCyGIAV-M98y3FHsRID3GGmLPhGmGDpoPpNkCsIsuEs6go4QM3gSI91cmVkUxVxL8J1KYNofJoMHaETQADxHYopXCS7BwuayHkdZM97I5sBJlo4K0qS_XJqpAdktWOOApwESDiFQsXi4fyBy0cHelWe--KtytSEhZM0Z1Ujv8A\",\"scope\":\"openid profile email offline_access\",\"expires_in\":86400,\"token_type\":\"Bearer\",\"decodedToken\":{\"encoded\":{\"header\":\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhzSm91Y0tjam1VVkFMT2ZKSUFhMiJ9\",\"payload\":\"eyJnaXZlbl9uYW1lIjoiVmluY2VudCIsImZhbWlseV9uYW1lIjoiQXV0b21hdGlvbiIsIm5pY2tuYW1lIjoiYXV0b21hdGlvbmVtbSIsIm5hbWUiOiJWaW5jZW50IEF1dG9tYXRpb24iLCJwaWN0dXJlIjoiaHR0cHM6Ly9zLmdyYXZhdGFyLmNvbS9hdmF0YXIvNTc5YTRkY2Y4MDdkOTRmYWE1MGZiZjMyNTA2NDNlZmY_cz00ODAmcj1wZyZkPWh0dHBzJTNBJTJGJTJGY2RuLmF1dGgwLmNvbSUyRmF2YXRhcnMlMkZ2YS5wbmciLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wN1QwNjoxMToyMS4yNzhaIiwiZW1haWwiOiJhdXRvbWF0aW9uZW1tQHlvcG1haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS8iLCJhdWQiOiI1RmN3bjNsdk1RazZYSGI1TTBndDJNQnpoeUtwaUxJOSIsInN1YiI6ImF1dGgwfDY5MGFjNzAyN2Y0ODI3NTJiZWQ3NGM5OCIsImlhdCI6MTc2Nzc2NjI4NSwiZXhwIjoxNzY3NzY5ODg1LCJzaWQiOiIwbzJPWDZzVXNNMmVCNXhnLUo3TXdRZXRjallKMzYxWiIsImF1dGhfdGltZSI6MTc2Nzc2NjI4MSwibm9uY2UiOiJaV1Z1VEdSTlVXdFRiV3BTZmt3eE1VTlFlaTV5T1hrMlkycG1aRU56YTFWNFNFOHVZMHh4VWtocVF3PT0ifQ\",\"signature\":\"vvVdJ3BTEgJ7JkkLhhHwPkUSkngZ9bGJkSqV07ppW5GHwoh_-nN8KLgo4H8ehyASaDaXgnIRbwAmAX_u8aMNFI7ti1wCzcbsiBiU6jDtBCL0W3JGsyrGegAofh_YZJjmxvD0BTz9mw368RUfi7dtEXCLAEXiugCYlbg7DSTHBJE4DCyGIAV-M98y3FHsRID3GGmLPhGmGDpoPpNkCsIsuEs6go4QM3gSI91cmVkUxVxL8J1KYNofJoMHaETQADxHYopXCS7BwuayHkdZM97I5sBJlo4K0qS_XJqpAdktWOOApwESDiFQsXi4fyBy0cHelWe--KtytSEhZM0Z1Ujv8A\"},\"header\":{\"alg\":\"RS256\",\"typ\":\"JWT\",\"kid\":\"8sJoucKcjmUVALOfJIAa2\"},\"claims\":{\"__raw\":\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhzSm91Y0tjam1VVkFMT2ZKSUFhMiJ9.eyJnaXZlbl9uYW1lIjoiVmluY2VudCIsImZhbWlseV9uYW1lIjoiQXV0b21hdGlvbiIsIm5pY2tuYW1lIjoiYXV0b21hdGlvbmVtbSIsIm5hbWUiOiJWaW5jZW50IEF1dG9tYXRpb24iLCJwaWN0dXJlIjoiaHR0cHM6Ly9zLmdyYXZhdGFyLmNvbS9hdmF0YXIvNTc5YTRkY2Y4MDdkOTRmYWE1MGZiZjMyNTA2NDNlZmY_cz00ODAmcj1wZyZkPWh0dHBzJTNBJTJGJTJGY2RuLmF1dGgwLmNvbSUyRmF2YXRhcnMlMkZ2YS5wbmciLCJ1cGRhdGVkX2F0IjoiMjAyNi0wMS0wN1QwNjoxMToyMS4yNzhaIiwiZW1haWwiOiJhdXRvbWF0aW9uZW1tQHlvcG1haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImlzcyI6Imh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS8iLCJhdWQiOiI1RmN3bjNsdk1RazZYSGI1TTBndDJNQnpoeUtwaUxJOSIsInN1YiI6ImF1dGgwfDY5MGFjNzAyN2Y0ODI3NTJiZWQ3NGM5OCIsImlhdCI6MTc2Nzc2NjI4NSwiZXhwIjoxNzY3NzY5ODg1LCJzaWQiOiIwbzJPWDZzVXNNMmVCNXhnLUo3TXdRZXRjallKMzYxWiIsImF1dGhfdGltZSI6MTc2Nzc2NjI4MSwibm9uY2UiOiJaV1Z1VEdSTlVXdFRiV3BTZmt3eE1VTlFlaTV5T1hrMlkycG1aRU56YTFWNFNFOHVZMHh4VWtocVF3PT0ifQ.vvVdJ3BTEgJ7JkkLhhHwPkUSkngZ9bGJkSqV07ppW5GHwoh_-nN8KLgo4H8ehyASaDaXgnIRbwAmAX_u8aMNFI7ti1wCzcbsiBiU6jDtBCL0W3JGsyrGegAofh_YZJjmxvD0BTz9mw368RUfi7dtEXCLAEXiugCYlbg7DSTHBJE4DCyGIAV-M98y3FHsRID3GGmLPhGmGDpoPpNkCsIsuEs6go4QM3gSI91cmVkUxVxL8J1KYNofJoMHaETQADxHYopXCS7BwuayHkdZM97I5sBJlo4K0qS_XJqpAdktWOOApwESDiFQsXi4fyBy0cHelWe--KtytSEhZM0Z1Ujv8A\",\"given_name\":\"Vincent\",\"family_name\":\"Automation\",\"nickname\":\"automationemm\",\"name\":\"Vincent Automation\",\"picture\":\"https://s.gravatar.com/avatar/579a4dcf807d94faa50fbf3250643eff?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fva.png\",\"updated_at\":\"2026-01-07T06:11:21.278Z\",\"email\":\"automationemm@yopmail.com\",\"email_verified\":true,\"iss\":\"https://staging-wizyemm.us.auth0.com/\",\"aud\":\"5Fcwn3lvMQk6XHb5M0gt2MBzhyKpiLI9\",\"sub\":\"auth0|690ac7027f482752bed74c98\",\"iat\":1767766285,\"exp\":1767769885,\"sid\":\"0o2OX6sUsM2eB5xg-J7MwQetcjYJ361Z\",\"auth_time\":1767766281,\"nonce\":\"ZWVuTGRNUWtTbWpSfkwxMUNQei5yOXk2Y2pmZENza1V4SE8uY0xxUkhqQw==\"},\"user\":{\"given_name\":\"Vincent\",\"family_name\":\"Automation\",\"nickname\":\"automationemm\",\"name\":\"Vincent Automation\",\"picture\":\"https://s.gravatar.com/avatar/579a4dcf807d94faa50fbf3250643eff?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fva.png\",\"updated_at\":\"2026-01-07T06:11:21.278Z\",\"email\":\"automationemm@yopmail.com\",\"email_verified\":true,\"sub\":\"auth0|690ac7027f482752bed74c98\"}},\"audience\":\"https://wizyemm.eu/api\",\"oauthTokenScope\":\"openid profile email\",\"client_id\":\"5Fcwn3lvMQk6XHb5M0gt2MBzhyKpiLI9\"},\"expiresAt\":1767769885}"
+        },
+        {
+          "name": "lscache-language",
+          "value": "\"es\""
+        },
+        {
+          "name": "lscache-WizyEMM-License-Banner",
+          "value": "false"
+        },
+        {
+          "name": "lscache-WizyEMM-AccessToken",
+          "value": "\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhzSm91Y0tjam1VVkFMT2ZKSUFhMiJ9.eyJodHRwczovL3dpenllbW0vcGVybWlzc2lvbnMiOnt9LCJodHRwczovL3dpenllbW0vaWRlbnRpdGllcyI6WyJhdXRoMHw2OTBhYzcwMjdmNDgyNzUyYmVkNzRjOTgiXSwiaHR0cHM6Ly93aXp5ZW1tL2VtYWlsIjoiYXV0b21hdGlvbmVtbUB5b3BtYWlsLmNvbSIsImlzcyI6Imh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS8iLCJzdWIiOiJhdXRoMHw2OTBhYzcwMjdmNDgyNzUyYmVkNzRjOTgiLCJhdWQiOlsiaHR0cHM6Ly93aXp5ZW1tLmV1L2FwaSIsImh0dHBzOi8vc3RhZ2luZy13aXp5ZW1tLnVzLmF1dGgwLmNvbS91c2VyaW5mbyJdLCJpYXQiOjE3Njc3NjYyODUsImV4cCI6MTc2Nzg1MjY4NSwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCIsImF6cCI6IjVGY3duM2x2TVFrNlhIYjVNMGd0Mk1Cemh5S3BpTEk5In0.isk622bSviC9qZ7t2_MtQI40BVm7-jgBd83k8PgQmjoAOwsjaxdoY5tXyu-hQDFfLrkfGR7uwkkTDRetgENMNKnvYgpIudLmDKOGcA-nitug5XFKP261flZEQCRZ6sLSlOd9D8gc-FicAQrIJrfkcYDglo89SmDKcFYWfbc8iav7ErRpFK-agqqVPagzR5XIfWLE4evBcRnWGjos1ZJ3DhQrw8Al3kfw5L5hfukxf9v66pxJYOsj7t0L_kaOB1uJ6M2hI-a4sWuekLioBxe1H6qx8sWgqG9vOkTvdvpZj-z4LMnmsUskShvn0nCQgbduO9ZVaMD_ZdIybO9JeGHnUg\""
+        }
+      ]
+    }
+  ]
+}
