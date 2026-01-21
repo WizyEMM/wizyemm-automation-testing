@@ -95,7 +95,7 @@ jobs:
           DOMAIN: ${{ secrets.DOMAIN }}
         continue-on-error: true
         run: |
-          VERSION=$(curl -s --max-time 10 "${DOMAIN}/api/v1/public/version" | jq -r '.version // empty')
+          VERSION=$(curl -s --max-time 10 "${DOMAIN}/api/v1/public/version" | jq -r '.version // ""')
           if [ -z "$VERSION" ]; then
             echo "⚠️ Failed to fetch version from API, will proceed without version"
             echo "version=" >> $GITHUB_OUTPUT
