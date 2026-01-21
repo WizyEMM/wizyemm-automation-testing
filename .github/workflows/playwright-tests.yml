@@ -92,10 +92,18 @@ jobs:
       - name: Fetch Current Version from API
         id: version
         env:
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          REGION: ${{ secrets.REGION }}
           DOMAIN: ${{ secrets.DOMAIN }}
         continue-on-error: true
         run: |
-          VERSION=$(curl -s --max-time 10 "${DOMAIN}/api/v1/public/version" | jq -r '.version // ""')
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
           if [ -z "$VERSION" ]; then
             echo "⚠️ Failed to fetch version from API, will proceed without version"
             echo "version=" >> $GITHUB_OUTPUT
