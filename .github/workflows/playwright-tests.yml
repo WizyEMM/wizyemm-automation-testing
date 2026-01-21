@@ -6,6 +6,7 @@ on:
       - main
       - development
       - slackbot/integration
+      - feature/auto-version-detection
     
   pull_request:
     branches:
@@ -88,6 +89,21 @@ jobs:
           rm -rf allure-results test-results
           mkdir -p allure-results test-results
 
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+        continue-on-error: true
+        run: |
+          VERSION=$(curl -s --max-time 10 "${DOMAIN}/api/v1/public/version" | jq -r '.version // empty')
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run login tests
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
@@ -115,7 +131,7 @@ jobs:
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
+          RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
         run: |
           npm install node-fetch
