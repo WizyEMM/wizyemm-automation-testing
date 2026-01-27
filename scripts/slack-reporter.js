@@ -121,6 +121,13 @@ async function sendSlackReport() {
     const GITHUB_REF = process.env.GITHUB_REF || '';
     const GITHUB_HEAD_REF = process.env.GITHUB_HEAD_REF || '';
     
+    // Log version detection method
+    if (RELEASE_TITLE) {
+      console.log(`🔍 Version detected: ${RELEASE_TITLE}`);
+    } else {
+      console.log('ℹ️ No version detected - will be shown as "Test Report" in Slack');
+    }
+    
     if (!SLACK_BOT_TOKEN) {
       console.error('❌ SLACK_BOT_TOKEN is required');
       process.exit(1);
