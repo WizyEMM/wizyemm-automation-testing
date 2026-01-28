@@ -146,11 +146,10 @@ jobs:
       - name: Upload Allure Report to GCS
         if: always()
         run: |
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           REPORT_PATH="allure-reports/latest"
           
           echo "📤 Uploading Allure report to GCS..."
-          gsutil -m -h "Cache-Control:no-cache" cp -r allure-report/* gs://emm-test-artifacts/$REPORT_PATH/
+          gcloud storage cp -r allure-report/* gs://emm-test-artifacts/$REPORT_PATH/ --no-user-output-enabled
           
           echo "✅ Report uploaded successfully"
           echo "📋 Report URL: https://storage.googleapis.com/emm-test-artifacts/$REPORT_PATH/index.html" >> $GITHUB_STEP_SUMMARY
