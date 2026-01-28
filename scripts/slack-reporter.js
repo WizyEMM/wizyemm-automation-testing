@@ -120,6 +120,7 @@ async function sendSlackReport() {
     const GITHUB_WORKFLOW = process.env.GITHUB_WORKFLOW || 'GitHub Actions';
     const GITHUB_REF = process.env.GITHUB_REF || '';
     const GITHUB_HEAD_REF = process.env.GITHUB_HEAD_REF || '';
+    const ALLURE_REPORT_URL = process.env.ALLURE_REPORT_URL || config.slack.allureReportUrl;
     
     // Log version detection method
     if (RELEASE_TITLE) {
@@ -264,14 +265,14 @@ async function sendSlackReport() {
         config.slackBlocks.divider,
         // Report link block
         config.slackBlocks.reportLinkBlock,
-        // Button block - TODO: Uncomment when Allure report hosting is ready
-        // {
-        //   ...config.slackBlocks.buttonBlock,
-        //   elements: config.slackBlocks.buttonBlock.elements.map(element => ({
-        //     ...element,
-        //     url: config.slack.allureReportUrl
-        //   }))
-        // },
+        // Button block
+        {
+          ...config.slackBlocks.buttonBlock,
+          elements: config.slackBlocks.buttonBlock.elements.map(element => ({
+            ...element,
+            url: ALLURE_REPORT_URL
+          }))
+        },
         // Context block
         {
           ...config.slackBlocks.contextBlock,
