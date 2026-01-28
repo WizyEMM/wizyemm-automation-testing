@@ -136,12 +136,14 @@ jobs:
           allure generate allure-results -o allure-report
 
       - name: Authenticate to Google Cloud
+        if: always()
         id: auth
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
+        if: always()
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Upload Allure Report to GCS
