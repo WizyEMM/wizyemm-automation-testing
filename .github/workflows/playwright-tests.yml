@@ -143,13 +143,20 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Verify GCS Authentication
+        run: |
+          gcloud auth list
+          gcloud config list
+
       - name: Upload Allure Report to GCS
         if: always()
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
         run: |
           REPORT_PATH="allure-reports/latest"
           
           echo "📤 Uploading Allure report to GCS..."
-          gcloud storage cp -r allure-report/* gs://emm-test-artifacts/$REPORT_PATH/ --no-user-output-enabled
+          gcloud storage cp -r allure-report/* gs://emm-test-artifacts/$REPORT_PATH/
           
           echo "✅ Report uploaded successfully"
           echo "📋 Report URL: https://storage.googleapis.com/emm-test-artifacts/$REPORT_PATH/index.html" >> $GITHUB_STEP_SUMMARY
