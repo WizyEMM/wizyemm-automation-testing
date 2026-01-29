@@ -175,7 +175,19 @@ jobs:
           echo "📋 Report location: gs://emm-test-artifacts/$REPORT_PATH/" >> $GITHUB_STEP_SUMMARY
           
           echo "🔐 Generating signed URL (valid for 7 days)..."
-          SIGNED_URL=$(gcloud storage sign-url $GOOGLE_APPLICATION_CREDENTIALS --duration=7d $GCS_OBJECT | tail -1 | awk '{print $1}')
+          if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ] || [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "❌ Service account credentials file not found: $GOOGLE_APPLICATION_CREDENTIALS"
+            exit 1
+          fi
+          
+          SIGNED_URL=$(gcloud storage sign-url "$GOOGLE_APPLICATION_CREDENTIALS" --duration=7d "gs://emm-test-artifacts/$REPORT_PATH/index.html" 2>&1 | grep -E '^https' | head -1)
+          
+          if [ -z "$SIGNED_URL" ]; then
+            echo "❌ Failed to generate signed URL"
+            echo "Command output:"
+            gcloud storage sign-url "$GOOGLE_APPLICATION_CREDENTIALS" --duration=7d "gs://emm-test-artifacts/$REPORT_PATH/index.html"
+            exit 1
+          fi
           
           echo "✅ Signed URL generated"
           echo "🔗 Signed URL: $SIGNED_URL"
