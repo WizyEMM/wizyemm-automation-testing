@@ -150,15 +150,28 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
-          REPORT_PATH="allure-reports/latest"
+          # Get version, default to timestamp if not available
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Count existing test runs for this version
+          EXISTING_RUNS=$(gcloud storage ls gs://emm-test-artifacts/allure-reports/v${VERSION}-Tr.* 2>/dev/null | grep -c "v${VERSION}-Tr\." || echo "0")
+          TEST_RUN=$((EXISTING_RUNS + 1))
+          
+          # Set report path with version and test run counter
+          REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
           GCS_OBJECT="gs://emm-test-artifacts/$REPORT_PATH/index.html"
           
           echo "📤 Uploading Allure report to GCS..."
-          echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+          echo "Version: v${VERSION}"
+          echo "Test Run: Tr.${TEST_RUN}"
+          echo "Folder: $REPORT_PATH"
           gcloud storage cp -r allure-report/* gs://emm-test-artifacts/$REPORT_PATH/
           
           echo "✅ Report uploaded successfully"
-          echo "📋 Report URL: https://storage.googleapis.com/emm-test-artifacts/$REPORT_PATH/index.html" >> $GITHUB_STEP_SUMMARY
+          echo "📋 Report location: gs://emm-test-artifacts/$REPORT_PATH/" >> $GITHUB_STEP_SUMMARY
           
           echo "🔐 Generating signed URL (valid for 7 days)..."
           SIGNED_URL=$(gcloud storage sign-url $GOOGLE_APPLICATION_CREDENTIALS --duration=7d $GCS_OBJECT | tail -1 | awk '{print $1}')
@@ -166,8 +179,9 @@ jobs:
           echo "✅ Signed URL generated"
           echo "🔗 Signed URL: $SIGNED_URL"
           
-          # Export signed URL for use in Slack reporter
+          # Export variables for Slack reporter
           echo "ALLURE_REPORT_URL=$SIGNED_URL" >> $GITHUB_ENV
+          echo "ALLURE_VERSION=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_ENV
 
       - name: Send Test Report to Slack
         if: always()
@@ -176,6 +190,7 @@ jobs:
           RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
           ALLURE_REPORT_URL: ${{ env.ALLURE_REPORT_URL }}
+          ALLURE_VERSION: ${{ env.ALLURE_VERSION }}
         run: |
           npm install node-fetch
           node scripts/slack-reporter.js
