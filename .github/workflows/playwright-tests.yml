@@ -191,33 +191,30 @@ jobs:
           echo "🔐 Generating signed URL (valid for 7 days)..."
           if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
             echo "❌ Service account credentials file not found at: $GOOGLE_APPLICATION_CREDENTIALS"
-            echo "Available files:"
-            ls -la ~/.config/gcloud/ 2>/dev/null || echo "No gcloud config found"
             exit 1
           fi
           
-          echo "ℹ️ Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+          # Install google-cloud-storage package
+          npm install @google-cloud/storage -q
           
-          # Generate signed URL and capture output
-          SIGNED_URL_OUTPUT=$(gcloud storage sign-url "$GOOGLE_APPLICATION_CREDENTIALS" --duration=7d "gs://emm-test-artifacts/$REPORT_PATH/index.html" 2>&1)
-          SIGNED_URL=$(echo "$SIGNED_URL_OUTPUT" | grep -E '^https://' | head -1)
+          # Generate signed URL using Node.js script
+          SIGNED_URL=$(node scripts/generate-signed-url.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" "$REPORT_PATH/index.html" 7)
           
-          if [ -z "$SIGNED_URL" ]; then
+          if [ -z "$SIGNED_URL" ] || [[ ! "$SIGNED_URL" =~ ^https:// ]]; then
             echo "❌ Failed to generate signed URL"
-            echo "Sign-URL command output:"
-            echo "$SIGNED_URL_OUTPUT"
+            echo "Output: $SIGNED_URL"
             exit 1
           fi
           
           echo "✅ Signed URL generated successfully"
-          echo "🔗 Signed URL: $SIGNED_URL"
+          echo "🔗 Signed URL: ${SIGNED_URL:0:80}..."
           
           # Export as step outputs for next steps
           echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
           echo "version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
           
           echo "📤 Exported outputs:"
-          echo "  - signed_url: $(echo $SIGNED_URL | cut -c 1-50)..."
+          echo "  - signed_url: ${SIGNED_URL:0:80}..."
           echo "  - version: v${VERSION}-Tr.${TEST_RUN}"
 
       - name: Send Test Report to Slack
