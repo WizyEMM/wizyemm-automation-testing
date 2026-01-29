@@ -147,6 +147,7 @@ jobs:
 
       - name: Upload Allure Report to GCS
         if: always()
+        id: gcs_upload
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
@@ -179,9 +180,9 @@ jobs:
           echo "✅ Signed URL generated"
           echo "🔗 Signed URL: $SIGNED_URL"
           
-          # Export variables for Slack reporter
-          echo "ALLURE_REPORT_URL=$SIGNED_URL" >> $GITHUB_ENV
-          echo "ALLURE_VERSION=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_ENV
+          # Export as step outputs for next steps
+          echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
+          echo "version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
 
       - name: Send Test Report to Slack
         if: always()
@@ -189,8 +190,8 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
-          ALLURE_REPORT_URL: ${{ env.ALLURE_REPORT_URL }}
-          ALLURE_VERSION: ${{ env.ALLURE_VERSION }}
+          ALLURE_REPORT_URL: ${{ steps.gcs_upload.outputs.signed_url }}
+          ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
         run: |
           npm install node-fetch
           node scripts/slack-reporter.js
