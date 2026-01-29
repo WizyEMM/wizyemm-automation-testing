@@ -6,7 +6,6 @@ on:
       - main
       - development
       - slackbot/integration
-      - feature/auto-version-detection
     
   pull_request:
     branches:
@@ -152,6 +151,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
           REPORT_PATH="allure-reports/latest"
+          GCS_OBJECT="gs://emm-test-artifacts/$REPORT_PATH/index.html"
           
           echo "📤 Uploading Allure report to GCS..."
           echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
@@ -160,8 +160,14 @@ jobs:
           echo "✅ Report uploaded successfully"
           echo "📋 Report URL: https://storage.googleapis.com/emm-test-artifacts/$REPORT_PATH/index.html" >> $GITHUB_STEP_SUMMARY
           
-          # Export for use in Slack reporter
-          echo "ALLURE_REPORT_URL=https://storage.googleapis.com/emm-test-artifacts/$REPORT_PATH/index.html" >> $GITHUB_ENV
+          echo "🔐 Generating signed URL (valid for 7 days)..."
+          SIGNED_URL=$(gcloud storage sign-url $GOOGLE_APPLICATION_CREDENTIALS --duration=7d $GCS_OBJECT | tail -1 | awk '{print $1}')
+          
+          echo "✅ Signed URL generated"
+          echo "🔗 Signed URL: $SIGNED_URL"
+          
+          # Export signed URL for use in Slack reporter
+          echo "ALLURE_REPORT_URL=$SIGNED_URL" >> $GITHUB_ENV
 
       - name: Send Test Report to Slack
         if: always()
