@@ -1,8 +1,7 @@
 {
   "slack": {
     "channel": "C0A9MV92HRC",
-    "timezone": "Asia/Manila",
-    "allureReportUrl": "https://storage.googleapis.com/emm-test-artifacts/allure-reports/latest/index.html"
+    "timezone": "Asia/Manila"
   },
   "testResults": {
     "allureSummaryPath": "allure-report/widgets/summary.json",

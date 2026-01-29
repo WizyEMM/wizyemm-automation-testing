@@ -120,7 +120,13 @@ async function sendSlackReport() {
     const GITHUB_WORKFLOW = process.env.GITHUB_WORKFLOW || 'GitHub Actions';
     const GITHUB_REF = process.env.GITHUB_REF || '';
     const GITHUB_HEAD_REF = process.env.GITHUB_HEAD_REF || '';
-    const ALLURE_REPORT_URL = process.env.ALLURE_REPORT_URL || config.slack.allureReportUrl;
+    const ALLURE_REPORT_URL = process.env.ALLURE_REPORT_URL;
+    const ALLURE_VERSION = process.env.ALLURE_VERSION || 'Unknown';
+    
+    if (!ALLURE_REPORT_URL) {
+      console.error('❌ ALLURE_REPORT_URL is required');
+      process.exit(1);
+    }
     
     // Log version detection method
     if (RELEASE_TITLE) {
@@ -128,6 +134,8 @@ async function sendSlackReport() {
     } else {
       console.log('ℹ️ No version detected - will be shown as "Test Report" in Slack');
     }
+    
+    console.log(`📊 Allure Report: ${ALLURE_VERSION}`);
     
     if (!SLACK_BOT_TOKEN) {
       console.error('❌ SLACK_BOT_TOKEN is required');
@@ -153,10 +161,12 @@ async function sendSlackReport() {
 
     const targetChannel = getSlackChannel();
 
-    // Set report header using config templates
-    const reportHeader = RELEASE_TITLE 
+    // Set report header using config templates + add test run version
+    let reportHeader = RELEASE_TITLE 
       ? replacePlaceholders(config.messages.reportHeaderTemplate.withRelease, { releaseTitle: RELEASE_TITLE })
       : replacePlaceholders(config.messages.reportHeaderTemplate.withoutRelease, { timestamp: getFormattedTimestamp() });
+    
+    reportHeader += ` | ${ALLURE_VERSION}`;
 
     // Get test summary from Allure
     let allureSummary = { statistic: { total: 0, passed: 0, failed: 0, broken: 0, skipped: 0 } };
