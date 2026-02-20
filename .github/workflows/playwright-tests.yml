@@ -131,7 +131,7 @@ jobs:
       - name: Generate Allure Report
         if: always()
         run: |
-          npm install -g allure-commandline
+          npm install -g allure-commandline@latest
           allure generate allure-results -o allure-report
 
       - name: Authenticate to Google Cloud
@@ -217,17 +217,65 @@ jobs:
           echo "  - signed_url: ${SIGNED_URL:0:80}..."
           echo "  - version: v${VERSION}-Tr.${TEST_RUN}"
 
+      - name: Generate and Upload Allure Dashboard
+        if: always()
+        id: dashboard
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: |
+          echo "📊 Generating Allure Reports Dashboard..."
+          
+          # Install @google-cloud/storage
+          npm install @google-cloud/storage -q
+          
+          # Generate dashboard HTML and list all reports
+          DASHBOARD_OUTPUT=$(node scripts/generate-dashboard.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" 2>&1)
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to generate dashboard"
+            echo "$DASHBOARD_OUTPUT"
+            exit 1
+          fi
+          
+          echo "$DASHBOARD_OUTPUT"
+          
+          # Extract dashboard signed URL and path from output
+          DASHBOARD_FILE=$(echo "$DASHBOARD_OUTPUT" | grep "dashboard_file=" | cut -d'=' -f2)
+          DASHBOARD_PATH=$(echo "$DASHBOARD_OUTPUT" | grep "dashboard_path=" | cut -d'=' -f2)
+          DASHBOARD_SIGNED_URL=$(echo "$DASHBOARD_OUTPUT" | grep "dashboard_signed_url=" | cut -d'=' -f2)
+          
+          if [ -z "$DASHBOARD_SIGNED_URL" ] || [[ ! "$DASHBOARD_SIGNED_URL" =~ ^https:// ]]; then
+            echo "❌ Failed to extract dashboard signed URL"
+            exit 1
+          fi
+          
+          # Upload dashboard HTML to GCS
+          echo "📤 Uploading dashboard to GCS..."
+          gcloud storage cp "$DASHBOARD_FILE" "gs://emm-test-artifacts/$DASHBOARD_PATH"
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to upload dashboard"
+            exit 1
+          fi
+          
+          echo "✅ Dashboard uploaded successfully"
+          echo "🔗 Dashboard URL: ${DASHBOARD_SIGNED_URL:0:80}..."
+          
+          # Export dashboard URL for Slack step
+          echo "dashboard_signed_url=$DASHBOARD_SIGNED_URL" >> $GITHUB_OUTPUT
+          echo "dashboard_path=$DASHBOARD_PATH" >> $GITHUB_OUTPUT
+
       - name: Send Test Report to Slack
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
-          ALLURE_REPORT_URL: ${{ steps.gcs_upload.outputs.signed_url }}
+          ALLURE_REPORT_URL: ${{ steps.dashboard.outputs.dashboard_signed_url }}
           ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
         run: |
           echo "🔍 Environment variables check:"
-          echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
+          echo "  - ALLURE_REPORT_URL (Dashboard): ${ALLURE_REPORT_URL:0:50}..."
           echo "  - ALLURE_VERSION: $ALLURE_VERSION"
           echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
           
