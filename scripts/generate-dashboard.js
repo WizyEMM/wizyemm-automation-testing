@@ -53,14 +53,26 @@ async function listReports(credentialsPath, bucketName, prefix = 'allure-reports
     // Prefixes are the "directories" returned by GCS
     const prefixes = apiResponse.prefixes || [];
     
+    console.log(`📂 Bucket: ${bucketName}`);
+    console.log(`📂 Prefix: ${prefix}`);
+    console.log(`📂 Found ${files.length} files and ${prefixes.length} folders`);
+    
+    if (prefixes.length > 0) {
+      console.log(`📂 Prefixes: ${prefixes.join(', ')}`);
+    }
+    
     // Parse report folders
     const reports = [];
     if (prefixes && prefixes.length > 0) {
       for (const p of prefixes) {
         const folderName = p.split('/').filter(x => x).pop();
+        console.log(`  🔍 Checking folder: ${p} → ${folderName}`);
+        
         if (folderName && folderName.includes('-Tr.')) {
           // Extract version and test run number
           const match = folderName.match(/v(.*)-Tr\.(\d+)/);
+          console.log(`    ✅ Pattern matched! Version: ${match[1]}, Run: ${match[2]}`);
+          
           if (match) {
             const version = match[1];
             const testRun = match[2];
@@ -69,9 +81,11 @@ async function listReports(credentialsPath, bucketName, prefix = 'allure-reports
               version,
               testRun: parseInt(testRun),
               fullPath: `${prefix}${folderName}/index.html`,
-              timestamp: new Date().toISOString() // Could be enhanced with metadata
+              timestamp: new Date().toISOString()
             });
           }
+        } else if (folderName) {
+          console.log(`    ❌ Skipped: doesn't match pattern (missing -Tr.)`);
         }
       }
     }
@@ -83,6 +97,11 @@ async function listReports(credentialsPath, bucketName, prefix = 'allure-reports
       }
       return b.testRun - a.testRun;
     });
+    
+    console.log(`✅ Final reports found: ${reports.length}`);
+    if (reports.length > 0) {
+      reports.forEach((r, i) => console.log(`  ${i + 1}. v${r.version}-Tr.${r.testRun}`));
+    }
     
     return reports;
   } catch (error) {
