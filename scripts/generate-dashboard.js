@@ -43,20 +43,19 @@ async function listReports(credentialsPath, bucketName, prefix = 'allure-reports
     });
     
     const bucket = storage.bucket(bucketName);
-    const [files] = await bucket.getFiles({
+    
+    // Get files and prefixes (directories) - delimiter '/' separates them
+    const [files, apiResponse] = await bucket.getFiles({
       prefix: prefix,
       delimiter: '/'
     });
     
-    // Get directories (prefixes)
-    const [, prefixes] = await bucket.getFiles({
-      prefix: prefix,
-      delimiter: '/'
-    });
+    // Prefixes are the "directories" returned by GCS
+    const prefixes = apiResponse.prefixes || [];
     
     // Parse report folders
     const reports = [];
-    if (prefixes) {
+    if (prefixes && prefixes.length > 0) {
       for (const p of prefixes) {
         const folderName = p.split('/').filter(x => x).pop();
         if (folderName && folderName.includes('-Tr.')) {
@@ -359,11 +358,12 @@ async function generateDashboard(credentialsPath, bucketName) {
     console.log(`📤 Dashboard file: ${dashboardPath}`);
     console.log(`🔗 Dashboard URL: ${dashboardSignedUrl}`);
     
-    // Export for use in workflow
-    console.log('\n📤 Outputs:');
-    console.log(`dashboard_file=${tempDashbaordPath}`);
-    console.log(`dashboard_path=${dashboardPath}`);
-    console.log(`dashboard_signed_url=${dashboardSignedUrl}`);
+    // Export outputs in simple parseable format (on separate lines)
+    console.log('---OUTPUTS_START---');
+    console.log(`DASHBOARD_FILE=${tempDashbaordPath}`);
+    console.log(`DASHBOARD_PATH=${dashboardPath}`);
+    console.log(`DASHBOARD_SIGNED_URL=${dashboardSignedUrl}`);
+    console.log('---OUTPUTS_END---');
     
   } catch (error) {
     console.error('❌ Error generating dashboard:', error.message);
