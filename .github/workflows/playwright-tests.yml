@@ -131,7 +131,7 @@ jobs:
       - name: Generate Allure Report
         if: always()
         run: |
-          npm install -g allure-commandline@latest
+          npm install -g allure
           allure generate allure-results -o allure-report
 
       - name: Authenticate to Google Cloud
