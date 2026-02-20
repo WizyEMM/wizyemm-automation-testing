@@ -227,7 +227,7 @@ jobs:
           ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
         run: |
           echo "🔍 Environment variables check:"
-          echo "  - ALLURE_REPORT_URL (Dashboard): ${ALLURE_REPORT_URL:0:50}..."
+          echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
           echo "  - ALLURE_VERSION: $ALLURE_VERSION"
           echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
           
