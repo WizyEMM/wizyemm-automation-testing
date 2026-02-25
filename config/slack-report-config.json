@@ -1,0 +1,105 @@
+{
+  "slack": {
+    "channel": "C0A9MV92HRC",
+    "timezone": "Asia/Manila"
+  },
+  "testResults": {
+    "allureSummaryPath": "allure-report/widgets/summary.json",
+    "allureResultsPath": "allure-results",
+    "testResultsPath": "test-results",
+    "jsonReporterFile": "results.json",
+    "maxFailedTestsToShow": 10
+  },
+  "messages": {
+    "noFailedTests": "No failed tests 🎉",
+    "noFlakyTests": "No flaky tests 🎉", 
+    "noDetailedInfo": "No detailed failure information available",
+    "reportHeaderTemplate": {
+      "withRelease": "🚀 Test Report - Release: {releaseTitle}",
+      "withoutRelease": "Test Report {timestamp}"
+    },
+    "statusMessages": {
+      "allPassed": "✅ All Tests Passed",
+      "hasFailed": "❌ {count} Tests Failed",
+      "hasFlaky": "⚠️ {count} Tests Flaky"
+    },
+    "statusEmojis": {
+      "passed": "✅",
+      "failed": "❌",
+      "flaky": "⚠️"
+    }
+  },
+  "slackBlocks": {
+    "headerBlock": {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "emoji": true
+      }
+    },
+    "statusBlock": {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Status*: {status}\n *Execution Time*: {executionTime}"
+      }
+    },
+    "summaryBlock": {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "📊 *Summary*:\n• Passed:  {passed}{passedPercentDisplay}\n• Flaky:   {flaky}{flakyPercentDisplay}\n• Failed:  {failed}{failedPercentDisplay}\n• Skipped: {skipped}{skippedPercentDisplay}"
+      }
+    },
+    "performanceBlock": {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "🎯 *Performance*:\n• Test duration: {avgDuration}\n• Suite duration: {suiteDuration}"
+      }
+    },
+
+    "divider": {
+      "type": "divider"
+    },
+
+    "issuesBlock": {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Test Issues:*\n{details}"
+      }
+    },
+    "reportLinkBlock": {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "📋 *View detailed report:*"
+      }
+    },
+    "buttonBlock": {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Open Allure Report",
+            "emoji": true
+          },
+          "url": "{reportUrl}",
+          "style": "primary"
+        }
+      ]
+    },
+    "contextBlock": {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "WizyEmm Automation | {workflow}"
+        }
+      ]
+    }
+  }
+}
