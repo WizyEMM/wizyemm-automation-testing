@@ -47,6 +47,55 @@ function formatDuration(milliseconds) {
 }
 
 /**
+ * Get test statistics by parsing allure-results files (Allure v3 compatible)
+ */
+async function getTestStatistics() {
+  let stats = {
+    total: 0,
+    passed: 0,
+    failed: 0,
+    broken: 0,
+    skipped: 0
+  };
+
+  try {
+    if (fs.existsSync(config.testResults.allureResultsPath)) {
+      const allureFiles = fs.readdirSync(config.testResults.allureResultsPath)
+        .filter(file => file.endsWith('-result.json'));
+      
+      console.log(`📂 Found ${allureFiles.length} test result files`);
+      
+      for (const file of allureFiles) {
+        const filePath = path.join(config.testResults.allureResultsPath, file);
+        try {
+          const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          
+          stats.total++;
+          
+          // Parse status field (Allure v3 format: passed, failed, broken, skipped)
+          const status = content.status;
+          if (status === 'passed') {
+            stats.passed++;
+          } else if (status === 'failed') {
+            stats.failed++;
+          } else if (status === 'broken') {
+            stats.broken++;
+          } else if (status === 'skipped') {
+            stats.skipped++;
+          }
+        } catch (parseError) {
+          console.warn(`⚠️ Could not parse ${file}: ${parseError.message}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not read test statistics:", error.message);
+  }
+
+  return stats;
+}
+
+/**
  * Get performance metrics from test results
  */
 async function getPerformanceMetrics() {
@@ -144,18 +193,17 @@ async function sendSlackReport() {
 
     // Determine which channel to use based on branch
     function getSlackChannel() {
-      // Check if we're on staging branch or in a staging environment
-      const isStagingBranch = GITHUB_REF.includes('slackbot/integration') ||
-                             GITHUB_HEAD_REF.includes('slackbot/integration') ||
-                             process.env.NODE_ENV === 'slackbot/integration' ||
-                             process.env.ENVIRONMENT === 'slackbot/integration';
+      // Check if we're on development branch (staging) or production (main/production)
+      const branchRef = GITHUB_REF || '';
       
-      if (isStagingBranch) {
-        console.log('🔄 Detected staging environment - using staging channel');
+      // If development branch → staging channel
+      if (branchRef.includes('development')) {
+        console.log('🔄 Detected development branch - using staging channel');
         return 'C0AA2U56LKT'; // Staging channel
       } else {
+        // main, production, or any other branch → production channel
         console.log('🚀 Using production channel');
-        return config.slack.channel; // Main channel from config
+        return config.slack.channel; // Production channel from config
       }
     }
 
@@ -168,17 +216,13 @@ async function sendSlackReport() {
     
     reportHeader += ` | ${ALLURE_VERSION}`;
 
-    // Get test summary from Allure
-    let allureSummary = { statistic: { total: 0, passed: 0, failed: 0, broken: 0, skipped: 0 } };
-    
-    if (fs.existsSync(config.testResults.allureSummaryPath)) {
-      allureSummary = JSON.parse(fs.readFileSync(config.testResults.allureSummaryPath, 'utf8'));
-    }
-    const totalTests = allureSummary.statistic.total || 0;
-    const passedTests = allureSummary.statistic.passed || 0;
-    const flakyTests = allureSummary.statistic.broken || 0;
-    const failedTests = allureSummary.statistic.failed || 0;
-    const skippedTests = allureSummary.statistic.skipped || 0;
+    // Get test statistics from Allure v3 results
+    const testStats = await getTestStatistics();
+    const totalTests = testStats.total;
+    const passedTests = testStats.passed;
+    const flakyTests = testStats.broken;
+    const failedTests = testStats.failed;
+    const skippedTests = testStats.skipped;
     
     // Debug: Log test counts
     console.log(`📊 Test Summary: Total=${totalTests}, Passed=${passedTests}, Failed=${failedTests}, Flaky=${flakyTests}, Skipped=${skippedTests}`);
