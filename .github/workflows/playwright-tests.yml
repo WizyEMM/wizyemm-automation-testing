@@ -3,8 +3,20 @@ name: Playwright Tests
 on:
   push:
     branches:
-      - pipeline/release
-      - pipeline/**
+      - main
+      - development
+      - slackbot/integration
+    
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_title:
+        description: 'Release title from Jira'
+        required: false
+        type: string
+
 
 jobs:
   # test:
@@ -76,6 +88,29 @@ jobs:
           rm -rf allure-results test-results
           mkdir -p allure-results test-results
 
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          REGION: ${{ secrets.REGION }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run login tests
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
@@ -92,3 +127,109 @@ jobs:
           name: allure-results-login
           path: allure-results/
           retention-days: 7
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          npm install -g allure
+          allure generate allure-results -o allure-report
+
+      - name: Authenticate to Google Cloud
+        if: always()
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        if: always()
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload Allure Report to GCS
+        if: always()
+        id: gcs_upload
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: |
+          # Get version, default to timestamp if not available
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          echo "📊 Checking existing test runs for version: $VERSION"
+          
+          # List all folders for this version and find the highest test run number
+          echo "ℹ️ Listing existing folders for version: $VERSION"
+          FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/allure-reports/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
+          echo "Found folders: $FOLDER_LIST"
+          
+          # Extract the highest test run number
+          if [ -z "$FOLDER_LIST" ]; then
+            TEST_RUN=1
+            echo "ℹ️ No existing runs found, starting with Tr.1"
+          else
+            # Extract numbers from folder names like "v2.64.0-rc.0-Tr.1/" and find max
+            HIGHEST=$(echo "$FOLDER_LIST" | sed 's/.*-Tr\.\([0-9]*\)\/.*/\1/' | sort -n | tail -1)
+            TEST_RUN=$((HIGHEST + 1))
+            echo "ℹ️ Found highest run number: $HIGHEST, next run will be: Tr.$TEST_RUN"
+          fi
+          
+          # Set report path with version and test run counter
+          REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
+          GCS_OBJECT="gs://emm-test-artifacts/$REPORT_PATH/index.html"
+          
+          echo "📤 Uploading Allure report to GCS..."
+          echo "Version: v${VERSION}"
+          echo "Test Run: Tr.${TEST_RUN}"
+          echo "Folder: $REPORT_PATH"
+          gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
+          
+          echo "✅ Report uploaded successfully"
+          echo "📋 Report location: gs://emm-test-artifacts/$REPORT_PATH/" >> $GITHUB_STEP_SUMMARY
+          
+          echo "🔐 Generating signed URL (valid for 7 days)..."
+          if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+            echo "❌ Service account credentials file not found at: $GOOGLE_APPLICATION_CREDENTIALS"
+            exit 1
+          fi
+          
+          # Install google-cloud-storage package
+          npm install @google-cloud/storage -q
+          
+          # Generate signed URL using Node.js script
+          SIGNED_URL=$(node scripts/generate-signed-url.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" "$REPORT_PATH/index.html" 7)
+          
+          if [ -z "$SIGNED_URL" ] || [[ ! "$SIGNED_URL" =~ ^https:// ]]; then
+            echo "❌ Failed to generate signed URL"
+            echo "Output: $SIGNED_URL"
+            exit 1
+          fi
+          
+          echo "✅ Signed URL generated successfully"
+          echo "🔗 Signed URL: ${SIGNED_URL:0:80}..."
+          
+          # Export as step outputs for next steps
+          echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
+          echo "version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+          
+          echo "📤 Exported outputs:"
+          echo "  - signed_url: ${SIGNED_URL:0:80}..."
+          echo "  - version: v${VERSION}-Tr.${TEST_RUN}"
+
+      - name: Send Test Report to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          ALLURE_REPORT_URL: ${{ steps.gcs_upload.outputs.signed_url }}
+          ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
+        run: |
+          echo "🔍 Environment variables check:"
+          echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
+          echo "  - ALLURE_VERSION: $ALLURE_VERSION"
+          echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
+          
+          npm install node-fetch
+          node scripts/slack-reporter.js
