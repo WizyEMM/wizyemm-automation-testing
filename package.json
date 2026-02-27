@@ -24,7 +24,7 @@
   "homepage": "https://bitbucket.org/Wizyio/wizyemm-automation-testing#readme",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@types/node": "^24.0.10",
+    "@types/node": "^24.10.9",
     "allure-commandline": "^2.34.1",
     "allure-playwright": "^3.4.2",
     "cross-env": "^7.0.3",

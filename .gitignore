@@ -72,3 +72,13 @@ allure-report/
 # Allow workflows directory in .github
 !.github/
 !.github/workflows/
+
+# Authentication & Session Caches (SENSITIVE)
+# These are generated locally or in CI/CD and should NOT be committed
+Cookies/auth-cache.json
+user/.auth/user.json
+user/
+
+# Create example files instead (.example files can be committed)
+!Cookies/auth-cache.json.example
+!user/.auth/user.json.example
