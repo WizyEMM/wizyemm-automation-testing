@@ -266,8 +266,12 @@ export class AdminAccountsPage {
   async cleanupTest(): Promise<void> {
     const cancelButton = this.page.getByRole("button", { name: "Cancel" });
     if (await cancelButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await cancelButton.click();
-      await this.page.locator(".ant-modal-wrap").waitFor({ state: "detached" });
+     //timeout for 5 seconds and if not visible, catch errors
+      await cancelButton.click({ timeout: 5000 }).catch(() => {});
+      await this.page
+        .locator(".ant-modal-wrap")
+        .waitFor({ state: "detached", timeout: 2000 })
+        .catch(() => {});
     }
   }
 
@@ -401,6 +405,13 @@ export class AdminAccountsPage {
   async deleteSelectedUser(): Promise<void> {
     await this.removeButton.click();
     await this.okButton.click();
+    //wait for delete API response
+    await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/administrators") &&
+        resp.status() === 204 &&
+        resp.request().method() === "DELETE"
+    );
   }
 
   async refreshTable(): Promise<void> {
