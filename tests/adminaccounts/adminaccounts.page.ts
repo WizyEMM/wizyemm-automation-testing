@@ -66,13 +66,14 @@ export class AdminAccountsPage {
     await this.page
       .locator('input[type="radio"][value="FULLY_MANAGED"]')
       .check();
-    await this.okButton.click();
-    await this.page.waitForResponse(
+    const responsePromise = this.page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/profiles") &&
         resp.status() === 201 &&
         resp.request().method() === "POST"
     );
+    await this.okButton.click();
+    await responsePromise;
   }
 
   async deleteProfile(): Promise<void> {
