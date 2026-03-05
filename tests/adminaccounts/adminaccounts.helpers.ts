@@ -43,6 +43,7 @@ async function openAdminFilterDropdown(
 ): Promise<void> {
   await page.waitForLoadState("domcontentloaded");
   await page
+  //change to columnheader 
     .getByRole("columnheader", { name: filterName })
     .getByRole("button")
     .click();
