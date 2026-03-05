@@ -266,12 +266,11 @@ export class AdminAccountsPage {
 
   async cleanupTest(): Promise<void> {
     const cancelButton = this.page.getByRole("button", { name: "Cancel" });
-    if (await cancelButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-     //timeout for 5 seconds and if not visible, catch errors
-      await cancelButton.click({ timeout: 5000 }).catch(() => {});
+    if ((await cancelButton.count()) > 0) {
+      await cancelButton.click().catch(() => {});
       await this.page
         .locator(".ant-modal-wrap")
-        .waitFor({ state: "detached", timeout: 2000 })
+        .waitFor({ state: "detached" })
         .catch(() => {});
     }
   }
