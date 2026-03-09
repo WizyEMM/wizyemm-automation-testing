@@ -73,7 +73,7 @@ jobs:
           NAMESPACE: ${{ secrets.NAMESPACE }}
           PASSWORD: ${{ secrets.PASSWORD }}
           REGION: ${{ secrets.REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+        run: npx playwright test --config=playwright.login.config.ts --project=chromium --reporter=line,allure-playwright
 
       - name: Run profile management tests
         if: always()
