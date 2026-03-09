@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
-import config from "../../utils/env";
-import { ApplicationsPage } from "./applications.page";
-import { PersonalAppsPage } from "./personalapplications.page";
-import { ProfileManagementPage } from "./profilemanagement.page";
-import { ProfileData, generateUniqueProfileName } from "./profiledata";
+import config from "../../../utils/env";
+import { ApplicationsPage } from "../shared/applications.page";
+import { PersonalAppsPage } from "../shared/personalapplications.page";
+import { ProfileManagementPage } from "../shared/profilemanagement.page";
+import { ProfileData, generateUniqueProfileName } from "../shared/profiledata";
 
 test.describe.configure({ timeout: 60_000 });
 
-test.describe("Profile Management Tests", () => {
+test.describe("Profile Application Tests", () => {
   let profileMgmt: ProfileManagementPage;
   let appsPage: ApplicationsPage;
   let personalApps: PersonalAppsPage;

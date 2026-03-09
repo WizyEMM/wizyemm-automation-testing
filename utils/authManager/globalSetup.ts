@@ -10,7 +10,8 @@ import { setupAuth, loadAuthCache, isAuthCacheValid, restoreAuthFromCache } from
 import * as fs from "fs";
 import * as path from "path";
 
-const STORAGE_STATE_FILE = "user/.auth/user.json";
+// Resolve path relative to project root (not current working directory)
+const STORAGE_STATE_FILE = path.resolve(__dirname, '../../user/.auth/user.json');
 
 async function globalSetup(fullConfig: FullConfig) {
   console.log("\n🔐 GLOBAL SETUP: Starting authentication...\n");

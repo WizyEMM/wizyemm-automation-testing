@@ -168,10 +168,8 @@ export class ApplicationsPage {
   }
 
   async toggleAppDisable(packageName: string): Promise<void> {
-    const escapedPackageName = await this.page.evaluate(
-      (pkg) => CSS.escape(pkg),
-      packageName
-    );
+    // Escape special characters in the package name for use in CSS selectors
+    const escapedPackageName = packageName.replace(/[."'\\!#$%&()[\]*+,./:;?@^`{|}~]/g, (char) => `\\${char}`);
     const checkbox = this.page.locator(`#disable-${escapedPackageName}`);
     await checkbox.click();
   }

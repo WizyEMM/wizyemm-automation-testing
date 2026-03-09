@@ -3,7 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const projectRoot = process.cwd();
+// Use script location to determine project root (go up 2 levels from scripts/)
+const projectRoot = path.resolve(__dirname, '..');
 const sourceHistoryDir = path.join(projectRoot, 'allure-report', 'history');
 const resultsDir = path.join(projectRoot, 'allure-results');
 const targetHistoryDir = path.join(resultsDir, 'history');
