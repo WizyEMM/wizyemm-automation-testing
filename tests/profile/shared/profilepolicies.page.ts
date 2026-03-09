@@ -35,6 +35,10 @@ export class ProfilePoliciesPage {
       .getByRole("switch");
 
     await switchLocator.click();
+    
+    // Wait for UI to settle before saving
+    await this.page.waitForTimeout(500);
+    
     await this.page.getByRole("button", { name: "Save" }).click();
 
     await this.page.waitForResponse(
