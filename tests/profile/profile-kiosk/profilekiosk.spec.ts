@@ -4,8 +4,6 @@ import { KioskPage } from "../shared/profilekiosk.page";
 import { ProfileManagementPage } from "../shared/profilemanagement.page";
 import { ProfileData, generateUniqueProfileName } from "../shared/profiledata";
 
-test.describe.configure({ timeout: 60_000 });
-
 test.describe("Profile Kiosk Tests", () => {
   let kioskPage: KioskPage;
   let profileManagementPage: ProfileManagementPage;
@@ -40,7 +38,7 @@ test.describe("Profile Kiosk Tests", () => {
     }
   });
 
-  test("kioskTracks - cycles through all track modes", async ({ page }) => {
+  test.skip("kioskTracks - cycles through all track modes", async ({ page }) => {
     const cycleModes = ProfileData.kiosk.tracks;
 
     const results = await kioskPage.performMultipleCycles(

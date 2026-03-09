@@ -12,10 +12,18 @@ export class IntegrationPage {
       .first();
     await searchBox.click();
     await this.page.getByRole("button", { name: "Refresh" }).click();
+    await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/") &&
+        resp.status() === 200
+    );
+    
     await searchBox.fill(profileName);
+    await this.page.waitForTimeout(1000);
 
     await this.page
-      .getByRole("link", { name: profileName, exact: true })
+      .locator("table tbody")
+      .locator(`tr:has-text("${profileName}")`)
       .waitFor({ state: "visible" });
 
     await this.page
@@ -95,6 +103,14 @@ export class IntegrationPage {
     await searchBox.press("Enter");
   }
 
+  async clearSearch() {
+    const searchBox = this.page.getByRole("textbox", { name: "Press Enter" });
+    await searchBox.click();
+    await searchBox.clear();
+    await searchBox.press("Enter");
+    await this.page.waitForTimeout(500);
+  }
+
   async searchKnoxSetting(searchTerm: string) {
     const searchBox = this.page.getByRole("textbox", {
       name: "Press Enter to search for",
@@ -151,6 +167,9 @@ export class IntegrationPage {
       .getByRole("button")
       .click();
   }
+
+  //await page.getByRole('button', { name: 'Leave' }).click();
+
 
   async setHoneywellBluetoothToEnable() {
     const header = this.page

@@ -178,8 +178,14 @@ export class ProfileManagementPage {
     const profileTypeSelector = this.page.getByLabel("New Profile").getByText(profileType);
     await profileTypeSelector.click();
     
-    await this.okButton.waitFor({ state: "visible" });
-    await this.page.waitForTimeout(500); // Small delay to ensure button is fully ready
+    // Wait for modal to fully render
+    await this.page.waitForTimeout(500);
+    
+    // Get OK button from the dialog context
+    const modal = this.page.locator(".ant-modal-content");
+    await modal.waitFor({ state: "visible" });
+    const okButton = modal.getByRole("button", { name: "OK" });
+    await okButton.waitFor({ state: "visible" });
     
     // Capture API response and click button in parallel
     const apiResponsePromise = this.page.waitForResponse(
@@ -191,7 +197,7 @@ export class ProfileManagementPage {
     
     const [apiResponse] = await Promise.all([
       apiResponsePromise,
-      this.okButton.click({ force: true }),
+      okButton.click({ force: true }),
     ]);
     
     // Validate API response
