@@ -66,6 +66,7 @@ jobs:
           fi
 
       - name: Run login tests
+        if: always()
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
           EMAIL: ${{ secrets.EMAIL }}
@@ -75,6 +76,7 @@ jobs:
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
       - name: Run profile management tests
+        if: always()
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
           EMAIL: ${{ secrets.EMAIL }}
