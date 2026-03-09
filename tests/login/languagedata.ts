@@ -17,7 +17,7 @@ export const languageTestData = {
       fromLanguage: "English",
       toLanguageMenuItem: "Bahasa Indonesia - Indonesian",
       expectedLanguage: "Bahasa Indonesia",
-      isOptional: false,
+      isOptional: true, // Not available in all environments (e.g. staging)
     },
     {
       fromLanguage: "English",
