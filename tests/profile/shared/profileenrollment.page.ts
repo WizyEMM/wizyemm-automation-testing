@@ -69,7 +69,7 @@ export class ProfileEnrollmentPage {
     await this.page.getByRole("button", { name: "reload Regenerate" }).click();
     await this.page.waitForTimeout(800);
     const okButton = this.page.getByRole("button", { name: "OK" });
-    await okButton.waitFor({ state: "enabled", timeout: 5000 });
+    await okButton.waitFor({ state: "visible", timeout: 5000 });
     await okButton.click({ force: true });
     await this.page.waitForResponse(
       (resp) =>
@@ -115,7 +115,7 @@ export class ProfileEnrollmentPage {
     await this.page.locator("#name").fill(wifiNetwork);
     await this.page.waitForTimeout(800);
     const okButton = this.page.getByRole("button", { name: "OK" });
-    await okButton.waitFor({ state: "enabled", timeout: 5000 });
+    await okButton.waitFor({ state: "visible", timeout: 5000 });
     await okButton.click({ force: true });
     await this.page.waitForResponse(
       (resp) =>
@@ -141,9 +141,8 @@ export class ProfileEnrollmentPage {
 
     await this.page.locator('input[type="checkbox"]').first().check();
     await this.page.getByRole("button", { name: "Remove" }).click();
-    await this.page.waitForTimeout(800);
     const okButton = this.page.getByRole("button", { name: "OK" });
-    await okButton.waitFor({ state: "enabled", timeout: 5000 });
+    await okButton.waitFor({ state: "visible", timeout: 5000 });
     await okButton.click({ force: true });
 
     await this.page.waitForResponse(

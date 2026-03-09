@@ -89,6 +89,9 @@ test.describe("Profile OEM Integrations", () => {
       IntegrationTestData.searchTerms.bluetooth
     );
     await integrationPage.resetDatalogicBluetooth();
+    await integrationPage.clearSearch();
+    await integrationPage.saveConfiguration();
+    await integrationPage.waitForUpdateSuccess();
   });
 
   test("honeywellIntegration - Configure Bluetooth restrictions", async ({
