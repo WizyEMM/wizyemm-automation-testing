@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
-import config from "../../utils/env";
-import { ProfileEnrollmentPage } from "./profileenrollment.page";
-import { ProfileManagementPage } from "./profilemanagement.page";
-import { ProfileData, generateUniqueProfileName } from "./profiledata";
+import config from "../../../utils/env";
+import { ProfileEnrollmentPage } from "../shared/profileenrollment.page";
+import { ProfileManagementPage } from "../shared/profilemanagement.page";
+import { ProfileData, generateUniqueProfileName } from "../shared/profiledata";
 
 test.describe.configure({ timeout: 60_000 });
 
