@@ -109,7 +109,7 @@ export class fleetManagementPage {
 
   async resetFilter(cellName: string) {
     await this.page
-      .getByRole("cell", { name: cellName })
+      .getByRole("columnheader", { name: cellName })
       .getByRole("button")
       .click();
     await this.resetButton.click();
@@ -182,7 +182,7 @@ export class fleetManagementPage {
     action: "check" | "uncheck"
   ) {
     await this.page
-      .getByRole("cell", { name: cellName })
+      .getByRole("columnheader", { name: cellName })
       .getByRole("button")
       .click();
     const menuItem = this.page
