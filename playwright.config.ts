@@ -57,7 +57,7 @@ export default defineConfig({
       use: { 
         viewport: { width: 1280, height: 720 }, 
         launchOptions:{
-          slowMo:50,
+          slowMo:100,
         },
       },
     },
@@ -66,7 +66,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }, 
         launchOptions:{
-          slowMo:50,
+          slowMo:100,
         },
       },
     },
