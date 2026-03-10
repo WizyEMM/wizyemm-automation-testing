@@ -66,13 +66,14 @@ export class AdminAccountsPage {
     await this.page
       .locator('input[type="radio"][value="FULLY_MANAGED"]')
       .check();
-    await this.okButton.click();
-    await this.page.waitForResponse(
+    const responsePromise = this.page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/profiles") &&
         resp.status() === 201 &&
         resp.request().method() === "POST"
     );
+    await this.okButton.click();
+    await responsePromise;
   }
 
   async deleteProfile(): Promise<void> {
@@ -265,9 +266,12 @@ export class AdminAccountsPage {
 
   async cleanupTest(): Promise<void> {
     const cancelButton = this.page.getByRole("button", { name: "Cancel" });
-    if (await cancelButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await cancelButton.click();
-      await this.page.locator(".ant-modal-wrap").waitFor({ state: "detached" });
+    if ((await cancelButton.count()) > 0) {
+      await cancelButton.click().catch(() => {});
+      await this.page
+        .locator(".ant-modal-wrap")
+        .waitFor({ state: "detached" })
+        .catch(() => {});
     }
   }
 
@@ -401,6 +405,13 @@ export class AdminAccountsPage {
   async deleteSelectedUser(): Promise<void> {
     await this.removeButton.click();
     await this.okButton.click();
+    //wait for delete API response
+    await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/administrators") &&
+        resp.status() === 204 &&
+        resp.request().method() === "DELETE"
+    );
   }
 
   async refreshTable(): Promise<void> {
