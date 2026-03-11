@@ -58,6 +58,14 @@ export class ProfileManagementPage {
     ]);
 
     await this.waitForTable();
+
+    // Wait for the profile name to appear in the table body, but don't fail if it doesn't
+    const profileRow = this.page.locator(`table tbody`, { hasText: profileName });
+    try {
+      await profileRow.waitFor({ state: "visible", timeout: 3000 });
+    } catch (error) {
+      // Profile not found in results - this is fine, let countProfilesWithName return 0
+    }
   }
 
   async clickSortColumn(columnName: string, reps: number = 3): Promise<void> {
@@ -130,6 +138,7 @@ export class ProfileManagementPage {
       );
     }
 
+    
     const targetRow = rows.nth(index);
     const profileCheckbox = targetRow.locator('input[type="checkbox"]');
     await profileCheckbox.waitFor({ state: "visible" });
@@ -157,13 +166,46 @@ export class ProfileManagementPage {
 
   async createProfile(profileName: string, profileType: string): Promise<void> {
     await this.navigateToProfileManagement();
+    
     await this.createButton.click();
-
+    
     const nameInput = this.page.getByRole("textbox", { name: /\* Name/i });
+    await nameInput.waitFor({ state: "visible" });
+    await nameInput.click();
+    
     await nameInput.fill(profileName);
-
-    await this.page.getByRole("radio", { name: profileType }).check();
-    await this.okButton.click();
+    
+    const profileTypeSelector = this.page.getByLabel("New Profile").getByText(profileType);
+    await profileTypeSelector.click();
+    
+    // Wait for modal to fully render
+    await this.page.waitForTimeout(500);
+    
+    // Get OK button from the dialog context
+    const modal = this.page.locator(".ant-modal-content");
+    await modal.waitFor({ state: "visible" });
+    const okButton = modal.getByRole("button", { name: "OK" });
+    await okButton.waitFor({ state: "visible" });
+    
+    // Capture API response and click button in parallel
+    const apiResponsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/profiles") &&
+        (resp.status() === 200 || resp.status() === 201) &&
+        (resp.request().method() === "POST" || resp.request().method() === "PUT")
+    );
+    
+    const [apiResponse] = await Promise.all([
+      apiResponsePromise,
+      okButton.click({ force: true }),
+    ]);
+    
+    // Validate API response
+    expect(apiResponse.status()).toBe(201);
+    
+    // Validate UI success message
+    const successMessage = this.page.getByText("A new profile has been created");
+    await successMessage.waitFor({ state: "visible" });
   }
 
   async renameProfile(
@@ -198,71 +240,129 @@ export class ProfileManagementPage {
       await this.waitForTable();
   }
 
-  async duplicateProfile(originalProfileName: string): Promise<void> {
+  async duplicateProfile(originalProfileName: string): Promise<string> {
     await this.navigateToProfileManagement();
     await this.searchProfile(originalProfileName);
     await this.selectProfileByIndex(originalProfileName, 0);
 
-    await this.duplicateButton.click();
-    await this.okButton.click();
-    await this.page.waitForResponse(
+    // Wait for duplicate button to be visible and enabled
+    await this.duplicateButton.waitFor({ state: "visible" });
+    await this.page.waitForTimeout(500); // Small delay to ensure button is fully ready
+    await this.duplicateButton.click({ force: true });
+    
+    // Wait for OK button in duplicate dialog
+    await this.okButton.waitFor({ state: "visible", timeout: 5000 });
+    await this.page.waitForTimeout(800); // Wait for dialog to fully render
+    
+    // Make sure button is enabled before clicking
+    await this.okButton.isEnabled().then(async (enabled) => {
+      if (!enabled) {
+        await this.page.waitForTimeout(500);
+      }
+    });
+    
+    // Capture API response and click button in parallel
+    const apiResponsePromise = this.page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/profiles") &&
         resp.status() === 201 &&
         resp.request().method() === "POST"
     );
+    
+    const [apiResponse] = await Promise.all([
+      apiResponsePromise,
+      this.okButton.click({ force: true }),
+    ]);
+    
+    // Validate API response
+    expect(apiResponse.status()).toBe(201);
+    console.log(`✓ Duplicate successful - API response: ${apiResponse.status()}`);
+
+    // Extract the duplicated profile name from the API response
+    let duplicatedName = `${originalProfileName} - duplicate`;
+    try {
+      const responseBody = await apiResponse.json();
+      if (responseBody.name) {
+        duplicatedName = responseBody.name;
+      }
+    } catch (error) {
+      // Silently use default name if API response cannot be parsed
+    }
 
     await this.waitForTable();
+    return duplicatedName;
   }
 
-  async deleteProfile(expectSuccess: boolean = true): Promise<boolean> {
+  async deleteProfile(profileName: string): Promise<boolean> {
+    await this.navigateToProfileManagement();
+    
+    // Use searchProfile to ensure proper waiting for profile to appear
+    await this.searchProfile(profileName);
+    
+    // Step 2: Check the checkbox in the row
+    const profileRow = this.page.getByRole("row", { name: new RegExp(profileName, "i") }).first();
+    const checkbox = profileRow.getByLabel("", { exact: true });
+    await checkbox.waitFor({ state: "visible" });
+    await checkbox.check();
+    await expect(checkbox).toBeChecked();
+    
+    // Step 3: Click Remove button
     await this.removeButton.click();
+    
+    // Step 4: Click OK button to confirm deletion
     await this.okButton.click();
-
-    if (expectSuccess) {
-      const successMessage = this.page.getByText("Action Summary");
-      const inUseMessage = this.page.getByText("Profile is used");
-
+    
+    // Step 5: Click body to dismiss any overlays/dropdowns
+    await this.page.locator("body").click();
+    
+    // Step 6: Wait for success message "Action Summary Success: 1"
+    const successMessage = this.page.locator("div").filter({ hasText: "Action Summary Success: 1" });
+    const inUseMessage = this.page.locator("div").filter({ hasText: "Profile is used" });
+    
+    try {
       await Promise.race([
-        successMessage.waitFor({ state: "visible" }),
+        successMessage.nth(3).waitFor({ state: "visible" }),
         inUseMessage.waitFor({ state: "visible" }),
       ]);
-
-      const isSuccess = await successMessage.isVisible().catch(() => false);
+      
+      const isSuccess = await successMessage.nth(3).isVisible().catch(() => false);
+      if (isSuccess) {
+        await successMessage.nth(3).click();
+        return true;
+      }
+      
       const isInUse = await inUseMessage.isVisible().catch(() => false);
-
       if (isInUse) {
         return false;
       }
-
-      await expect(successMessage).toBeVisible();
-      return true;
-    } else {
-      await expect(this.page.getByText("Profile is used")).toBeVisible();
+    } catch (error) {
       return false;
     }
+    
+    return false;
   }
 
   async deleteAllProfilesWithName(profileName: string): Promise<number> {
     let deletedCount = 0;
-    let totalCount = await this.countProfilesWithName(profileName);
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    while (totalCount > 0) {
+    while (attempts < maxAttempts) {
       await this.navigateToProfileManagement();
-      await this.searchProfile(profileName);
+      const count = await this.countProfilesWithName(profileName);
+      
+      if (count === 0) {
+        break;
+      }
 
-      const selectedCount = await this.selectAllProfilesWithName(profileName);
-      if (selectedCount === 0) break;
-
-      const success = await this.deleteProfile(true);
+      const success = await this.deleteProfile(profileName);
       if (success) {
-        deletedCount += selectedCount;
+        deletedCount++;
       } else {
         break;
       }
 
-      await this.navigateToProfileManagement();
-      totalCount = await this.countProfilesWithName(profileName);
+      attempts++;
     }
 
     return deletedCount;

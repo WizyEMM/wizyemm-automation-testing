@@ -4,6 +4,12 @@ export function generateUniqueProfileName(prefix: string): string {
   return `${prefix}-${timestamp}-${randomSuffix}`;
 }
 
+export const AutomationProfiles = {
+  byod: "Automation - BYOD",
+  cowp: "Automation - COWP",
+  fm: "Automation - FM",
+} as const;
+
 export const ProfileData = {
   profiles: {
     apps: "Playwright Apps",

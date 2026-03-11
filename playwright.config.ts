@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
 import config from './utils/env';
 
 /**
@@ -15,6 +16,9 @@ import config from './utils/env';
 export default defineConfig({
   globalSetup: './utils/authManager/globalSetup.ts',
   testDir: './tests',
+  // Explicitly set output directories to prevent generating outside project
+  outputDir: './test-results',
+  snapshotDir: './snapshots',
   /* Run tests in files in parallel */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -33,7 +37,7 @@ export default defineConfig({
   reporter: [
   ['list'],
   ['html'],
-  ['allure-playwright']
+  ['allure-playwright', { outputFolder: 'allure-results' }]
 ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -41,7 +45,7 @@ export default defineConfig({
     screenshot: "on",
     trace: 'on-first-retry',
     baseURL: config.baseUrl,
-    storageState: 'user/.auth/user.json', // Load auth state from global setup
+    storageState: path.resolve(__dirname, 'user/.auth/user.json'), // Load auth state from global setup
     //headless: process.env.HEADLESS !== "false",
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
   },
@@ -53,7 +57,7 @@ export default defineConfig({
       use: { 
         viewport: { width: 1280, height: 720 }, 
         launchOptions:{
-          slowMo:50,
+          slowMo:100,
         },
       },
     },
@@ -62,7 +66,7 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }, 
         launchOptions:{
-          slowMo:50,
+          slowMo:100,
         },
       },
     },

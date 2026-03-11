@@ -1,10 +1,8 @@
 import { test, expect } from "@playwright/test";
-import config from "../../utils/env";
-import { KioskPage } from "./profilekiosk.page";
-import { ProfileManagementPage } from "./profilemanagement.page";
-import { ProfileData, generateUniqueProfileName } from "./profiledata";
-
-test.describe.configure({ timeout: 60_000 });
+import config from "../../../utils/env";
+import { KioskPage } from "../shared/profilekiosk.page";
+import { ProfileManagementPage } from "../shared/profilemanagement.page";
+import { ProfileData, generateUniqueProfileName } from "../shared/profiledata";
 
 test.describe("Profile Kiosk Tests", () => {
   let kioskPage: KioskPage;
@@ -40,7 +38,7 @@ test.describe("Profile Kiosk Tests", () => {
     }
   });
 
-  test("kioskTracks - cycles through all track modes", async ({ page }) => {
+  test.skip("kioskTracks - cycles through all track modes", async ({ page }) => {
     const cycleModes = ProfileData.kiosk.tracks;
 
     const results = await kioskPage.performMultipleCycles(

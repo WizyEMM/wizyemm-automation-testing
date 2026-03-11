@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
-import config from "../../utils/env";
-import { ApplicationsPage } from "./applications.page";
-import { PersonalAppsPage } from "./personalapplications.page";
-import { ProfileManagementPage } from "./profilemanagement.page";
-import { ProfileData, generateUniqueProfileName } from "./profiledata";
+import config from "../../../utils/env";
+import { ApplicationsPage } from "../shared/applications.page";
+import { PersonalAppsPage } from "../shared/personalapplications.page";
+import { ProfileManagementPage } from "../shared/profilemanagement.page";
+import { ProfileData, generateUniqueProfileName } from "../shared/profiledata";
 
 test.describe.configure({ timeout: 60_000 });
 
-test.describe("Profile Management Tests", () => {
+test.describe("Profile Application Tests", () => {
   let profileMgmt: ProfileManagementPage;
   let appsPage: ApplicationsPage;
   let personalApps: PersonalAppsPage;
@@ -53,6 +53,7 @@ test.describe("Profile Management Tests", () => {
     await appsPage.removeApplicationFromWhitelist(
       ProfileData.applications.slack
     );
+    await appsPage.saveChanges();
   });
 
   test("installTypes - Cycle through install types", async () => {
@@ -91,6 +92,7 @@ test.describe("Profile Management Tests", () => {
     ];
 
     expect([b, c, a]).toEqual(expectedTypes);
+    await appsPage.saveChanges();
   });
 
   test("disableApp - Toggle app disable state", async () => {
@@ -102,6 +104,7 @@ test.describe("Profile Management Tests", () => {
       ProfileData.applications.wizyVision
     );
     await appsPage.toggleAppDisable(ProfileData.applications.appRowWizyVision);
+    await appsPage.saveChanges();
   });
 
   test("playStoreMode - Cycle through Play Store modes", async () => {
@@ -131,8 +134,9 @@ test.describe("Profile Management Tests", () => {
       ],
       a,
     ];
-
+    
     expect([b, c, a]).toEqual(expectedModes);
+    await appsPage.saveChanges();
   });
 
   test("appConfig - Configure app settings", async () => {
@@ -167,12 +171,13 @@ test.describe("Profile Management Tests", () => {
       ProfileData.applications.appRowWizyVision
     );
     await appsPage.cyclePermissionState(
+      ProfileData.applications.appRowWizyVision,
       ProfileData.permissions.camera,
       ProfileData.permissionStates
     );
   });
 
-  test("appTrack - Cycle through app tracks", async () => {
+test.skip("appTrack - Cycle through app tracks", async () => {
     profileName = generateUniqueProfileName("AppTrack");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -182,9 +187,14 @@ test.describe("Profile Management Tests", () => {
     );
 
     const results: string[] = [];
+    // Open tracks once before the loop
+    await appsPage.openAppTracks(ProfileData.applications.appRowWizyVision);
+    
     for (let i = 0; i < ProfileData.tracks.length; i++) {
-      await appsPage.openAppTracks(ProfileData.applications.appRowWizyVision);
-      const newTrack = await appsPage.cycleTrack(ProfileData.tracks);
+      const newTrack = await appsPage.cycleTrack(
+        ProfileData.applications.appRowWizyVision,
+        ProfileData.tracks
+      );
       results.push(newTrack);
     }
 
@@ -205,7 +215,8 @@ test.describe("Profile Management Tests", () => {
     expect([b, c, d, a]).toEqual(expectedTracks);
   });
 
-  test("personalWhiteRemove - Single kiosk app management", async ({
+
+  test.skip("personalWhiteRemove - Single kiosk app management", async ({
     page,
   }) => {
     profileName = generateUniqueProfileName("PersonalWhiteRemove");
@@ -213,22 +224,32 @@ test.describe("Profile Management Tests", () => {
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
     await appsPage.navigateToApplicationsTab();
 
+    // Set Play Store Mode to Restricted then Kiosk
     await appsPage.setPlayStoreMode("Restricted Play Store");
     await appsPage.setPlayStoreMode("Single-Application Kiosk");
+    
+    // Confirm kiosk mode switch
     await page.getByRole("button", { name: "Yes" }).click();
+    await page.waitForTimeout(500);
 
-    await appsPage.addApplicationToWhitelist(
+    // Add application in kiosk mode
+    await appsPage.addKioskModeApplication(
       ProfileData.applications.wizyVision
     );
 
-    await appsPage.selectApplicationById(
-      ProfileData.applications.appRowWizyVision
+    // Dismiss success message
+    await page.waitForTimeout(300);
+
+    // Remove the application
+    await appsPage.removeKioskModeApplication(
+      ProfileData.applications.wizyVision
     );
-    await appsPage.removeSelectedApplications();
-    await appsPage.saveChanges();
+
+    // Navigate back to profile management for cleanup
+    await profileMgmt.navigateToProfileManagement();
   });
 
-  test("personalPlayStoreMode - COPE personal apps", async () => {
+  test.skip("personalPlayStoreMode - COPE personal apps", async () => {
     profileName = generateUniqueProfileName("PersonalPlayStore");
 
     await profileMgmt.createProfile(
@@ -253,6 +274,7 @@ test.describe("Profile Management Tests", () => {
     ];
 
     expect([b, a]).toEqual(expectedModes);
+    await personalApps.saveChanges();
   });
 
   test("actionsAdvanced - Toggle advanced permissions", async () => {

@@ -65,6 +65,8 @@ notes/
 
 allure-results/
 allure-report/
+test-results/
+playwright-report/
 
 .history
 .vscode/

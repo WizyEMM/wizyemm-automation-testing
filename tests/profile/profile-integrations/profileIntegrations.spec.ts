@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import config from "../../utils/env";
-import { IntegrationPage } from "./profileintegrations.page";
-import { ProfileManagementPage } from "./profilemanagement.page";
+import config from "../../../utils/env";
+import { IntegrationPage } from "../shared/profileintegrations.page";
+import { ProfileManagementPage } from "../shared/profilemanagement.page";
 import {
   IntegrationTestData,
   generateUniqueProfileName,
   ProfileData,
-} from "./profiledata";
+} from "../shared/profiledata";
 
 test.describe.configure({ timeout: 60_000 });
 
@@ -89,6 +89,9 @@ test.describe("Profile OEM Integrations", () => {
       IntegrationTestData.searchTerms.bluetooth
     );
     await integrationPage.resetDatalogicBluetooth();
+    await integrationPage.clearSearch();
+    await integrationPage.saveConfiguration();
+    await integrationPage.waitForUpdateSuccess();
   });
 
   test("honeywellIntegration - Configure Bluetooth restrictions", async ({

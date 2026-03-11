@@ -86,6 +86,7 @@ async function extractTokensFromStorage(page: Page): Promise<TokenData> {
   try {
     // Try to extract from localStorage
     const tokensFromStorage = await page.evaluate(() => {
+      // @ts-ignore - window is available in page.evaluate() browser context
       const storage = window.localStorage;
       const keys = Object.keys(storage);
 
@@ -153,11 +154,14 @@ export async function restoreAuthFromCache(
     await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
 
     if (cache && cache.tokens && cache.tokens.access_token) {
+      // @ts-ignore - window is available in page.evaluate() browser context
       await page.evaluate((tokens) => {
         if (tokens.access_token) {
+          // @ts-ignore
           window.localStorage.setItem("access_token", tokens.access_token);
         }
         if (tokens.id_token) {
+          // @ts-ignore
           window.localStorage.setItem("id_token", tokens.id_token);
         }
       }, cache.tokens);

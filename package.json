@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "clean:allure": "if exist allure-results (echo Deleting allure-results && rd /s /q allure-results) else (echo allure-results folder does not exist)",
+    "test": "cross-env HEADLESS=false npx playwright test",
     "test:staging": "cross-env TEST_ENV=staging HEADLESS=false npx playwright test --project=chromium",
     "test:prod": "cross-env TEST_ENV=production HEADLESS=false npx playwright test --project=chromium",
     "test:dev": "cross-env TEST_ENV=development HEADLESS=false npx playwright test --project=chromium",
     "allure:history": "node scripts/prepare-allure-history.js",
-    "allure:report": "npm run allure:history && allure generate --clean && allure open"
+    "allure:report": "npm run allure:history && allure generate allure-results --clean -o allure-report && allure open allure-report"
   },
   "repository": {
     "type": "git",
