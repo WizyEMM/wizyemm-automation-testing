@@ -17,7 +17,7 @@ export const globalEnrollmentData = {
 
   wifi: {
     name: "Automation-enrollment-wifi",
-    password: "Playwright123",
+    password: "P@ssword123!",
     securityProtocol: "WEP-PSK",
   },
 

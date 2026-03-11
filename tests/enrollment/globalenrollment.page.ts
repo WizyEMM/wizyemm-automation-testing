@@ -57,14 +57,6 @@ export class globalEnrollmentPage {
       .click();
   }
 
-  async navigateToWifiNetworks(): Promise<void> {
-    await this.page
-      .getByRole("link", {
-        name: globalEnrollmentData.navigation.wifiNetworks,
-      })
-      .click();
-  }
-
   async toggleCheckbox(checkbox: Locator): Promise<void> {
     const isChecked = await checkbox.isChecked();
     await checkbox.setChecked(!isChecked);
@@ -83,51 +75,53 @@ export class globalEnrollmentPage {
   }
 
   async toggleSelector(
-    selectorId: string,
+    selectorLocator: Locator,
     option1: string,
     option2: string
   ): Promise<void> {
-    const selector = this.page.locator(
-      `.ant-select-selector:has(#${selectorId})`
-    );
-    const currentSelectionText = await selector
+    // Get current selection
+    const currentSelectionText = await selectorLocator
       .locator(".ant-select-selection-item")
       .textContent();
     const currentSelection = currentSelectionText?.trim() || "";
     const targetOption = currentSelection === option1 ? option2 : option1;
 
-    await selector.click();
+    // Click to open dropdown
+    await selectorLocator.click();
+    await this.page.waitForTimeout(500);
 
-    try {
-      await this.page
-        .locator(`#${selectorId}`)
-        .fill(targetOption, { timeout: 2000 });
-    } catch (error) {
-      console.log(
-        `Selector ${selectorId} is readonly, clicking option directly`
-      );
-    }
-    await this.page
+    // Wait for dropdown options to appear
+    const option = this.page
       .locator(".ant-select-item-option-content")
-      .filter({ hasText: targetOption })
-      .first()
-      .click();
+      .filter({ hasText: new RegExp(`^${targetOption}$`) })
+      .first();
+    
+    await option.waitFor({ state: "visible", timeout: 5000 });
+    
+    // Scroll to and click the option
+    await option.scrollIntoViewIfNeeded();
+    await option.click();
+    await this.page.waitForTimeout(500);
   }
 
   async toggleLanguage(option1: string, option2: string): Promise<void> {
-    await this.toggleSelector("locale", option1, option2);
+    const selector = this.page.locator("//input[@id='locale']/ancestor::div[@class[contains(., 'ant-select-selector')]]");
+    await this.toggleSelector(selector, option1, option2);
   }
 
   async toggleTimezone(option1: string, option2: string): Promise<void> {
-    await this.toggleSelector("timezone", option1, option2);
+    const selector = this.page.locator("//input[@id='timezone']/ancestor::div[@class[contains(., 'ant-select-selector')]]");
+    await this.toggleSelector(selector, option1, option2);
   }
 
   async toggleWifiNetwork(option1: string, option2: string): Promise<void> {
-    await this.toggleSelector("wifi-network-selector", option1, option2);
+    const selector = this.page.locator("//input[@id='wifi-network-selector']/ancestor::div[@class[contains(., 'ant-select-selector')]]");
+    await this.toggleSelector(selector, option1, option2);
   }
 
   async toggleWifiSecurity(option1: string, option2: string): Promise<void> {
-    await this.toggleSelector("wifi-security-selector", option1, option2);
+    const selector = this.page.locator("//input[@id='wifi-security-selector']/ancestor::div[@class[contains(., 'ant-select-selector')]]");
+    await this.toggleSelector(selector, option1, option2);
   }
 
   async updateQRCode(): Promise<void> {
@@ -147,78 +141,5 @@ export class globalEnrollmentPage {
         resp.status() === 200 &&
         resp.request().method() === "PATCH"
     );
-  }
-
-  async createWifiNetwork(name: string): Promise<void> {
-    await this.page
-      .getByRole("button", { name: globalEnrollmentData.buttons.createPlus })
-      .click();
-    await this.page.getByRole("textbox", { name: "* Name" }).fill(name);
-    await this.okButton.click();
-    await this.page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/wifi-networks") &&
-        resp.status() === 201 &&
-        resp.request().method() === "POST"
-    );
-  }
-
-  async configureWifiSecurity(
-    password: string,
-    protocol: string = "WEP-PSK"
-  ): Promise<void> {
-    const securityDropdown = this.page
-      .locator(".ant-select-selector")
-      .filter({ hasText: "Select security protocol" });
-
-    await securityDropdown.waitFor({ state: "visible" });
-
-    await expect(
-      securityDropdown.locator(
-        'xpath=ancestor::div[@class[contains(., "ant-select")]]'
-      )
-    ).not.toHaveClass(/ant-select-disabled/);
-
-    await securityDropdown.click();
-
-    await this.page
-      .locator(".ant-select-item-option-content")
-      .filter({ hasText: protocol })
-      .click();
-
-    await this.page.getByRole("textbox", { name: "Password" }).fill(password);
-
-    await this.page
-      .getByRole("button", { name: globalEnrollmentData.buttons.save })
-      .click();
-
-    await this.page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/wifi-networks/") &&
-        resp.status() === 200 &&
-        resp.request().method() === "PATCH"
-    );
-  }
-
-  async searchWifiByName(name: string): Promise<void> {
-    await this.page.getByRole("textbox", { name: "Filter by name" }).fill(name);
-  }
-
-  async deleteWifiNetwork(name: string): Promise<void> {
-    await this.page.getByRole("row", { name }).getByLabel("").check();
-    await this.page
-      .getByRole("button", { name: globalEnrollmentData.buttons.remove })
-      .click();
-    await this.okButton.click();
-    await this.page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/wifi-networks/") &&
-        resp.status() === 204 &&
-        resp.request().method() === "DELETE"
-    );
-  }
-
-  async refreshTable(): Promise<void> {
-    await this.page.getByRole("button", { name: "Refresh" }).click();
   }
 }
