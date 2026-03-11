@@ -73,9 +73,9 @@ jobs:
           NAMESPACE: ${{ secrets.NAMESPACE }}
           PASSWORD: ${{ secrets.PASSWORD }}
           REGION: ${{ secrets.REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --project=chromium --reporter=line,allure-playwright
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
-      - name: Run profile management tests
+      - name: Run all tests
         if: always()
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
@@ -83,7 +83,14 @@ jobs:
           NAMESPACE: ${{ secrets.NAMESPACE }}
           PASSWORD: ${{ secrets.PASSWORD }}
           REGION: ${{ secrets.REGION }}
-        run: npx playwright test tests/profile --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+        run: npx playwright test 
+          tests/profile 
+          tests/application 
+          tests/configuration 
+          tests/dashboard 
+          tests/fleet 
+          tests/notifications 
+          tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - name: Upload allure results
         uses: actions/upload-artifact@v4

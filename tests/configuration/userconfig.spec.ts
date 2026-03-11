@@ -9,13 +9,12 @@ test.beforeEach(async ({ page }) => {
   // Navigate to dashboard to trigger auth from storageState
   await page.goto(`${config.baseUrl}/dashboard`);
   await expect(page).toHaveURL(/dashboard/);
-  const userConfigurationPage = new UserConfigurationPage(page);
-  await userConfigurationPage.navigateToConfiguration();
 });
 
 test("userSort", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
 
+  await userConfigPage.navigateToConfiguration();
   await userConfigPage.navigateToUsers();
   await userConfigPage.sortUserColumns();
 
@@ -46,6 +45,7 @@ test.describe("User CRUD Operations", () => {
     await page.goto(`${config.baseUrl}/dashboard`);
     await expect(page).toHaveURL(/dashboard/);
     userConfigPage = new UserConfigurationPage(page);
+    await userConfigPage.navigateToConfiguration();
     await userConfigPage.navigateToUsers();
   });
 
@@ -123,6 +123,7 @@ test("wifi", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { wifi, navigation } = userConfigurationData;
 
+  await userConfigPage.navigateToConfiguration();
   const wifiName = `${wifi.name}.${Math.random().toString(36).substring(2, 9)}`;
   const newWifiName = `${wifi.name}.${Math.random()
     .toString(36)
@@ -154,6 +155,8 @@ test("wifi", async ({ page }) => {
 test("bundledActions", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { bundledActions } = userConfigurationData;
+
+  await userConfigPage.navigateToConfiguration();
   const bundleName = `${bundledActions.name}.${Math.random()
     .toString(36)
     .substring(2, 9)}`;
@@ -170,6 +173,7 @@ test("advancedSettings", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 
+  await userConfigPage.navigateToConfiguration();
   await userConfigPage.navigateToAdvanced();
 
   for (const manufacturer of manufacturers) {
