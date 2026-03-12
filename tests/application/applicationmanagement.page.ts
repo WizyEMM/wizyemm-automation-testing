@@ -24,6 +24,11 @@ export class ApplicationManagementPage {
     await this.page
       .getByRole("menuitem", { name: navigation.publicApplications })
       .click();
+    // Wait for the Google Play iframe to fully load
+    await this.page
+      .locator('iframe:visible[src*="play.google.com"]')
+      .waitFor({ state: "visible", timeout: 10_000 });
+    await this.page.waitForTimeout(5_000);
   }
 
   async navigateToWebApplications() {
@@ -85,6 +90,7 @@ export class ApplicationManagementPage {
 
   async searchPublicApp(searchTerm: string) {
     const frame = this.getPublicAppsFrame();
+    await frame.getByRole("textbox", { name: "Search" }).waitFor({ state: "visible" });
     await frame.getByRole("textbox", { name: "Search" }).click();
     await frame.getByRole("textbox", { name: "Search" }).fill(searchTerm);
     await frame.getByRole("button", { name: "Search" }).click();
