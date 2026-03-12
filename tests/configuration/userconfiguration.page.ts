@@ -34,7 +34,7 @@ export class UserConfigurationPage {
 
   private getFilterButton(columnName: "Type" | "Source") {
     return this.page
-      .getByRole("cell", { name: `${columnName} filter` })
+      .getByRole("columnheader", { name: `${columnName} filter` })
       .getByRole("button", { name: "filter" });
   }
 
