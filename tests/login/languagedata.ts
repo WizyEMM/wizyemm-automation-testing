@@ -41,13 +41,13 @@ export const languageTestData = {
       fromLanguage: "English",
       toLanguageMenuItem: "Deutsch - German",
       expectedLanguage: "Deutsch",
-      isOptional: true, // Reverted in latest release
+      isOptional: false, // Reverted in latest release
     },
     {
       fromLanguage: "English",
       toLanguageMenuItem: "中文 - Chinese",
       expectedLanguage: "中文",
-      isOptional: true, // Reverted in latest release
+      isOptional: false, // Reverted in latest release
     }
   ] as LanguageSwitch[],
 };
