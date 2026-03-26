@@ -2,6 +2,40 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 import config from './utils/env';
 
+const isJamfEnv = process.env.TEST_ENV === 'jamf';
+
+/** Match globalSetup: Jamf uses user-jamf.json so local runs do not clobber default storage. */
+const storageStatePath = path.resolve(
+  __dirname,
+  isJamfEnv ? 'user/.auth/user-jamf.json' : 'user/.auth/user.json'
+);
+
+const chromeUse = {
+  ...devices['Desktop Chrome'],
+  viewport: { width: 1280, height: 720 },
+  launchOptions: { slowMo: 100 },
+};
+
+const defaultProjects = [
+  {
+    name: `tests-${config.namespace}-${config.region || 'no region'}-${config.domain}`,
+    use: {
+      viewport: { width: 1280, height: 720 },
+      launchOptions: { slowMo: 100 },
+    },
+  },
+  { name: 'chromium', use: chromeUse },
+  {
+    name: 'firefox',
+    use: {
+      ...devices['Desktop Firefox'],
+      viewport: { width: 1280, height: 720 },
+      launchOptions: { slowMo: 50 },
+    },
+  },
+  { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+];
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -35,78 +69,24 @@ export default defineConfig({
   },
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-  ['list'],
-  ['html'],
-  ['allure-playwright', { outputFolder: 'allure-results' }]
-],
+    ['list'],
+    ['html'],
+    ['allure-playwright', { outputFolder: 'allure-results' }],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    video: "on",
-    screenshot: "on",
+    video: 'on',
+    screenshot: 'on',
     trace: 'on-first-retry',
     baseURL: config.baseUrl,
-    storageState: path.resolve(__dirname, 'user/.auth/user.json'), // Load auth state from global setup
+    storageState: storageStatePath,
     //headless: process.env.HEADLESS !== "false",
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
   },
 
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: `tests-${config.namespace}-${config.region || 'no region'}-${config.domain}`,
-      use: { 
-        viewport: { width: 1280, height: 720 }, 
-        launchOptions:{
-          slowMo:100,
-        },
-      },
-    },
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'],
-        viewport: { width: 1280, height: 720 }, 
-        launchOptions:{
-          slowMo:100,
-        },
-      },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'],
-        viewport: { width: 1280, height: 720 }, 
-        launchOptions:{
-          slowMo:50,
-        }, 
-        
-      },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
+  projects: isJamfEnv
+    ? [{ name: 'chromium', use: chromeUse }]
+    : defaultProjects,
 
   /* Run your local dev server before starting the tests */
   // webServer: {
