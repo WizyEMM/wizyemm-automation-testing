@@ -3,19 +3,102 @@
  * Handles login, cache restoration, and session management
  */
 
-import { BrowserContext, Page, expect } from "@playwright/test";
+import { BrowserContext, Page, expect, Frame } from "@playwright/test";
 import config from "../env";
 import {
   saveAuthCache,
   loadAuthCache,
   isAuthCacheValid,
   clearAuthCache,
+  getCacheFilePath,
+  JAMF_AUTH_ENV,
 } from "./cache";
 import { AuthCacheData, CookieData, TokenData } from "./types";
+
+// Re-export Jamf env constant for callers that branch on auth mode
+export { JAMF_AUTH_ENV };
+
+/**
+ * Locator for Auth0 "Log in using Jamf ID" primary action. Role name can differ by locale/a11y tree;
+ * fall back to stable class from Auth0/Jamf hosted page (`_button-login-id`).
+ */
+function jamfIdSubmitLocator(root: Page | Frame) {
+  return root
+    .getByRole("button", { name: /Log in using Jamf ID/i })
+    .or(root.getByRole("button", { name: /Jamf ID/i }))
+    .or(root.locator("button._button-login-id"))
+    .or(
+      root.locator(
+        'button[type="submit"][name="action"][value="default"]'
+      )
+    )
+    .or(root.locator("button").filter({ hasText: /Jamf ID/i }));
+}
+
+/**
+ * Click Jamf ID submit on main page or inside an Auth0 iframe if present.
+ */
+async function clickJamfIdSubmit(
+  page: Page,
+  after: "email" | "password"
+): Promise<void> {
+  const timeout = 45_000;
+  const btnMain = jamfIdSubmitLocator(page).first();
+
+  try {
+    await expect(btnMain).toBeVisible({ timeout });
+    await expect(btnMain).toBeEnabled({ timeout: 20_000 });
+    await btnMain.scrollIntoViewIfNeeded();
+    await btnMain.click();
+    console.log(`✓ Clicked Jamf ID submit (after ${after})`);
+    return;
+  } catch {
+    // Auth0 sometimes renders the form inside an iframe — try non-main frames
+    for (const frame of page.frames()) {
+      if (frame === page.mainFrame()) continue;
+      const btn = jamfIdSubmitLocator(frame).first();
+      try {
+        await expect(btn).toBeVisible({ timeout: 10_000 });
+        await expect(btn).toBeEnabled({ timeout: 15_000 });
+        await btn.scrollIntoViewIfNeeded();
+        await btn.click();
+        console.log(
+          `✓ Clicked Jamf ID submit (after ${after}, in frame ${frame.url().slice(0, 80)}…)`
+        );
+        return;
+      } catch {
+        continue;
+      }
+    }
+    throw new Error(
+      `Jamf ID submit button not found or not clickable after ${after} step`
+    );
+  }
+}
+
+/**
+ * Build auth payload from the current page (cookies + storage). Shared by standard and Jamf login.
+ * Change: extracted from performLogin to avoid duplicating capture logic for Jamf flow.
+ */
+async function buildAuthCacheData(page: Page): Promise<AuthCacheData> {
+  const cookies = await page.context().cookies();
+  const authCookies = cookies.filter((c) =>
+    ["did", "did_compat", "auth0", "_legacy_auth0"].some((name) =>
+      c.name.includes(name)
+    )
+  );
+  const tokens = await extractTokensFromStorage(page);
+  return {
+    cookies: authCookies as CookieData[],
+    tokens,
+    timestamp: Date.now(),
+  };
+}
 
 /**
  * Perform login and capture auth data
  * Extracts cookies and tokens from network requests/responses
+ * Change: uses buildAuthCacheData; saveAuthCache uses TEST_ENV (or pass-through via optional env in future)
  */
 export async function performLogin(
   page: Page,
@@ -56,26 +139,66 @@ export async function performLogin(
   await page.waitForURL(/dashboard/);
   console.log("✓ Login successful - redirected to dashboard");
 
-  // Extract cookies
-  const cookies = await page.context().cookies();
-  const authCookies = cookies.filter((c) =>
-    ["did", "did_compat", "auth0", "_legacy_auth0"].some((name) =>
-      c.name.includes(name)
-    )
-  );
-
-  // Extract tokens from local storage or session storage
-  const tokens = await extractTokensFromStorage(page);
-
-  const cacheData: AuthCacheData = {
-    cookies: authCookies as CookieData[],
-    tokens: tokens,
-    timestamp: Date.now(),
-  };
-
-  // Save to cache
+  const cacheData = await buildAuthCacheData(page);
   saveAuthCache(cacheData);
+  return cacheData;
+}
 
+/**
+ * Jamf instance login (Auth0 + Jamf ID UI).
+ * Flow differs from WizyEMM: after app "Login", only email is shown; "Log in using Jamf ID" reveals password;
+ * same button is clicked again to submit after password.
+ * Change: new entry point for TEST_ENV=jamf / Jamf staging Manager for Android.
+ */
+export async function performLoginJamf(
+  page: Page,
+  email: string,
+  password: string
+): Promise<AuthCacheData> {
+  console.log("🔐 Starting Jamf login process...");
+
+  await page.goto(config.baseUrl);
+  console.log(`✓ Navigated to ${config.baseUrl}`);
+
+  try {
+    await page.getByRole("button", { name: "Login" }).click();
+    console.log("✓ Clicked Login button");
+  } catch (error) {
+    console.log("ℹ Login button not found, continuing...");
+  }
+
+  // Wait for IdP / Auth0 shell before interacting (avoids racing the hosted login UI)
+  await page
+    .waitForURL(/auth0|account-|identifier|\/u\/login/i, { timeout: 60_000 })
+    .catch(() => {
+      console.log("ℹ IdP URL wait skipped (already on target flow)");
+    });
+  await page.waitForLoadState("domcontentloaded").catch(() => {});
+
+  // Identifier-first step: email (main page or iframe)
+  const emailInput = page
+    .locator(
+      'input[type="email"], input[name="username"], input[name="email"], #username'
+    )
+    .first();
+  await emailInput.waitFor({ state: "visible", timeout: 60_000 });
+  await emailInput.fill(email);
+  console.log(`✓ Filled email: ${email}`);
+
+  await clickJamfIdSubmit(page, "email");
+
+  await page.waitForSelector("#password", { state: "visible", timeout: 60_000 });
+  await page.fill("#password", password);
+  console.log("✓ Filled password");
+
+  await clickJamfIdSubmit(page, "password");
+
+  await page.waitForURL(/dashboard/);
+  console.log("✓ Jamf login successful - redirected to dashboard");
+
+  const cacheData = await buildAuthCacheData(page);
+  // Pin to jamf cache file even if TEST_ENV were wrong in a subprocess
+  saveAuthCache(cacheData, JAMF_AUTH_ENV);
   return cacheData;
 }
 
@@ -129,13 +252,15 @@ async function extractTokensFromStorage(page: Page): Promise<TokenData> {
 /**
  * Restore authentication from cache
  * Injects cached cookies and tokens into browser context
+ * Change: optional authEnv loads the matching cache file (jamf vs default)
  */
 export async function restoreAuthFromCache(
-  context: BrowserContext
+  context: BrowserContext,
+  authEnv?: string
 ): Promise<boolean> {
   console.log("🔄 Attempting to restore auth from cache...");
 
-  const cache = loadAuthCache();
+  const cache = loadAuthCache(authEnv);
 
   if (!isAuthCacheValid(cache)) {
     console.log("⚠ Cache invalid or expired, fresh login required");
@@ -175,7 +300,7 @@ export async function restoreAuthFromCache(
     return true;
   } catch (error) {
     console.error("Failed to restore auth from cache:", error);
-    clearAuthCache();
+    clearAuthCache(authEnv);
     return false;
   }
 }
@@ -183,20 +308,24 @@ export async function restoreAuthFromCache(
 /**
  * Setup authentication for tests
  * Checks cache first, performs login if needed
+ * Change: authEnv === jamf runs performLoginJamf and jamf cache; otherwise existing performLogin
  */
 export async function setupAuth(
   context: BrowserContext,
   email: string,
-  password: string
+  password: string,
+  authEnv?: string
 ): Promise<void> {
-  // Try to restore from cache first
-  const restored = await restoreAuthFromCache(context);
+  const restored = await restoreAuthFromCache(context, authEnv);
 
   if (!restored) {
-    // Cache invalid/expired, perform fresh login
     const page = await context.newPage();
     try {
-      await performLogin(page, email, password);
+      if (authEnv === JAMF_AUTH_ENV) {
+        await performLoginJamf(page, email, password);
+      } else {
+        await performLogin(page, email, password);
+      }
     } finally {
       await page.close();
     }
@@ -206,9 +335,10 @@ export async function setupAuth(
 /**
  * Clear cached authentication
  * Useful for logout or resetting tests
+ * Change: optional authEnv clears the cache file for that bucket
  */
-export async function clearAuth(): Promise<void> {
-  clearAuthCache();
+export async function clearAuth(authEnv?: string): Promise<void> {
+  clearAuthCache(authEnv);
 }
 
-export { loadAuthCache, isAuthCacheValid, saveAuthCache };
+export { loadAuthCache, isAuthCacheValid, saveAuthCache, getCacheFilePath };
