@@ -26,11 +26,34 @@ export class ProfileManagementPage {
     this.leaveButton = page.getByRole("button", { name: "Leave" });
   }
 
+  // True for /profiles list only, not /profiles/:id/...
+  private isOnProfileListPage(): boolean {
+    const path = new URL(this.page.url()).pathname.replace(/\/$/, "") || "/";
+    return path === "/profiles";
+  }
+
   async navigateToProfileManagement(): Promise<void> {
     if (await this.leaveButton.isVisible()) {
       await this.leaveButton.click();
     }
-    await this.profileManagementLink.click();
+    // Already on list: re-click nav often does not refetch — skip waitForResponse (avoids timeout).
+    if (this.isOnProfileListPage()) {
+      await this.waitForTable();
+      return;
+    }
+
+    // First visit from elsewhere: capture list GET + nav in parallel
+    const [listResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      this.profileManagementLink.click(),
+    ]);
+    // Validate API response
+    expect(listResponse.status()).toBe(200);
     await this.waitForTable();
   }
 
@@ -50,12 +73,17 @@ export class ProfileManagementPage {
     await searchBox.click();
     await searchBox.fill(profileName);
 
-    await Promise.all([
+    // Validate list GET after Refresh (matches search spec pattern)
+    const [searchListResponse] = await Promise.all([
       this.page.waitForResponse(
-        (resp) => resp.url().includes("/profiles") && resp.status() === 200
+        (resp) =>
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
       ),
       this.page.getByRole("button", { name: "Refresh" }).click(),
     ]);
+    expect(searchListResponse.status()).toBe(200);
 
     await this.waitForTable();
 
@@ -78,6 +106,7 @@ export class ProfileManagementPage {
         .waitFor({ state: "detached" })
         .catch(() => {});
 
+      // Sort may be client-side only — no reliable list GET per click
       await locator.click();
       await this.waitForTable();
     }
@@ -109,7 +138,17 @@ export class ProfileManagementPage {
       await this.page.getByRole("menuitem", { name: option }).click();
     }
 
-    await this.page.getByRole("button", { name: "OK" }).click();
+    // Filter OK refetches list — capture GET + click in parallel
+    const [filterListResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      this.page.getByRole("button", { name: "OK" }).click(),
+    ]);
+    expect(filterListResponse.status()).toBe(200);
     await this.waitForTable();
   }
   async countProfilesWithName(profileName: string): Promise<number> {
@@ -222,7 +261,20 @@ export class ProfileManagementPage {
     await nameInput.fill(newName);
     await expect(nameInput).toHaveValue(newName);
 
-    await this.okButton.click();
+    // Capture API response and click OK in parallel
+    const renameResponsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/profiles") &&
+        (resp.status() === 200 || resp.status() === 201) &&
+        ["PUT", "PATCH", "POST"].includes(resp.request().method())
+    );
+
+    const [renameResponse] = await Promise.all([
+      renameResponsePromise,
+      this.okButton.click(),
+    ]);
+    // Validate API response
+    expect([200, 201]).toContain(renameResponse.status());
 
     await expect(this.page.getByText("has been renamed")).toBeVisible();
 
@@ -233,11 +285,18 @@ export class ProfileManagementPage {
       .first();
     await searchBox.clear();
 
-    await this.page.waitForResponse(
-      (resp) => resp.url().includes("/profiles") && resp.status() === 200
-    ),
+    // Validate list GET after Refresh
+    const [refreshResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
       this.page.getByRole("button", { name: "Refresh" }).click(),
-      await this.waitForTable();
+    ]);
+    expect(refreshResponse.status()).toBe(200);
+    await this.waitForTable();
   }
 
   async duplicateProfile(originalProfileName: string): Promise<string> {
@@ -311,34 +370,61 @@ export class ProfileManagementPage {
     
     // Step 4: Click OK button to confirm deletion
     await this.okButton.click();
-    
+
+    // DELETE: 200/204 on success; 4xx when profile in use (UI still decides outcome below)
+    let deleteResponse: Awaited<
+      ReturnType<Page["waitForResponse"]>
+    > | null = null;
+    try {
+      deleteResponse = await this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "DELETE",
+        { timeout: 20000 }
+      );
+    } catch {
+      deleteResponse = null;
+    }
+
+    if (deleteResponse !== null) {
+      expect([200, 204, 400, 403, 409, 422]).toContain(
+        deleteResponse.status()
+      );
+    }
+
     // Step 5: Click body to dismiss any overlays/dropdowns
     await this.page.locator("body").click();
-    
+
     // Step 6: Wait for success message "Action Summary Success: 1"
     const successMessage = this.page.locator("div").filter({ hasText: "Action Summary Success: 1" });
     const inUseMessage = this.page.locator("div").filter({ hasText: "Profile is used" });
-    
+
     try {
       await Promise.race([
         successMessage.nth(3).waitFor({ state: "visible" }),
         inUseMessage.waitFor({ state: "visible" }),
       ]);
-      
+
       const isSuccess = await successMessage.nth(3).isVisible().catch(() => false);
       if (isSuccess) {
+        // Validate API response
+        expect(deleteResponse).not.toBeNull();
+        expect([200, 204]).toContain(deleteResponse!.status());
         await successMessage.nth(3).click();
         return true;
       }
-      
+
       const isInUse = await inUseMessage.isVisible().catch(() => false);
       if (isInUse) {
+        if (deleteResponse !== null) {
+          expect(deleteResponse.status()).toBeGreaterThanOrEqual(400);
+        }
         return false;
       }
     } catch (error) {
       return false;
     }
-    
+
     return false;
   }
 
@@ -370,7 +456,40 @@ export class ProfileManagementPage {
 
   async openProfile(profileName: string): Promise<void> {
     const row = this.page.getByRole("row", { name: profileName }).first();
-    await row.locator("a").first().click();
+    // Capture profile detail GET + link click in parallel
+    const [detailResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles/") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      row.locator("a").first().click(),
+    ]);
+    // Validate API response
+    expect(detailResponse.status()).toBe(200);
+    await expect(this.page).toHaveURL(
+      /\/profiles\/[a-zA-Z0-9-]+\/(policies|personal-policies)/
+    );
+  }
+
+  // Open profile by row has-text (metadata tests) — same GET assert as openProfile
+  async openProfileDetailsFromTable(profileName: string): Promise<void> {
+    const firstProfileLink = this.page
+      .locator(`tr:has-text("${profileName}") a`)
+      .first();
+    // Capture profile detail GET + link click in parallel
+    const [detailResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/profiles/") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      firstProfileLink.click(),
+    ]);
+    // Validate API response
+    expect(detailResponse.status()).toBe(200);
     await expect(this.page).toHaveURL(
       /\/profiles\/[a-zA-Z0-9-]+\/(policies|personal-policies)/
     );
