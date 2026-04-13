@@ -1,4 +1,4 @@
-import { Page, expect, Locator } from "@playwright/test";
+import { Page, expect, Locator, Response } from "@playwright/test";
 
 export class ProfileManagementPage {
   readonly page: Page;
@@ -222,7 +222,20 @@ export class ProfileManagementPage {
     await nameInput.fill(newName);
     await expect(nameInput).toHaveValue(newName);
 
-    await this.okButton.click();
+    const renameResponsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/profiles") &&
+        resp.status() === 200 &&
+        (resp.request().method() === "PATCH" ||
+          resp.request().method() === "PUT")
+    );
+
+    const [renameResponse] = await Promise.all([
+      renameResponsePromise,
+      this.okButton.click(),
+    ]);
+
+    expect(renameResponse.status()).toBe(200);
 
     await expect(this.page.getByText("has been renamed")).toBeVisible();
 
@@ -233,11 +246,13 @@ export class ProfileManagementPage {
       .first();
     await searchBox.clear();
 
-    await this.page.waitForResponse(
-      (resp) => resp.url().includes("/profiles") && resp.status() === 200
-    ),
+    await Promise.all([
+      this.page.waitForResponse(
+        (resp) => resp.url().includes("/profiles") && resp.status() === 200
+      ),
       this.page.getByRole("button", { name: "Refresh" }).click(),
-      await this.waitForTable();
+    ]);
+    await this.waitForTable();
   }
 
   async duplicateProfile(originalProfileName: string): Promise<string> {
@@ -309,36 +324,57 @@ export class ProfileManagementPage {
     // Step 3: Click Remove button
     await this.removeButton.click();
     
-    // Step 4: Click OK button to confirm deletion
+    const deleteResponsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/profiles/") &&
+        resp.request().method() === "DELETE",
+      { timeout: 5_000 }
+    );
+
     await this.okButton.click();
-    
-    // Step 5: Click body to dismiss any overlays/dropdowns
+
+    let deleteResponse: Response | null = null;
+    try {
+      deleteResponse = await deleteResponsePromise;
+    } catch {
+      deleteResponse = null;
+    }
+
     await this.page.locator("body").click();
-    
-    // Step 6: Wait for success message "Action Summary Success: 1"
+
     const successMessage = this.page.locator("div").filter({ hasText: "Action Summary Success: 1" });
     const inUseMessage = this.page.locator("div").filter({ hasText: "Profile is used" });
-    
+
     try {
       await Promise.race([
         successMessage.nth(3).waitFor({ state: "visible" }),
         inUseMessage.waitFor({ state: "visible" }),
       ]);
-      
+
       const isSuccess = await successMessage.nth(3).isVisible().catch(() => false);
       if (isSuccess) {
+        expect(
+          deleteResponse,
+          "DELETE must complete when the UI reports a successful removal"
+        ).not.toBeNull();
+        expect([200, 204]).toContain(deleteResponse!.status());
         await successMessage.nth(3).click();
         return true;
       }
-      
+
       const isInUse = await inUseMessage.isVisible().catch(() => false);
       if (isInUse) {
+        expect(
+          deleteResponse,
+          "DELETE must return when the UI reports profile in use"
+        ).not.toBeNull();
+        expect(deleteResponse!.status()).toBeGreaterThanOrEqual(400);
         return false;
       }
-    } catch (error) {
+    } catch {
       return false;
     }
-    
+
     return false;
   }
 
