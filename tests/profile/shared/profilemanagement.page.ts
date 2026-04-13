@@ -1,4 +1,4 @@
-import { Page, expect, Locator } from "@playwright/test";
+import { Page, expect, Locator, Response } from "@playwright/test";
 
 export class ProfileManagementPage {
   readonly page: Page;
@@ -261,20 +261,20 @@ export class ProfileManagementPage {
     await nameInput.fill(newName);
     await expect(nameInput).toHaveValue(newName);
 
-    // Capture API response and click OK in parallel
     const renameResponsePromise = this.page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/profiles") &&
-        (resp.status() === 200 || resp.status() === 201) &&
-        ["PUT", "PATCH", "POST"].includes(resp.request().method())
+        resp.status() === 200 &&
+        (resp.request().method() === "PATCH" ||
+          resp.request().method() === "PUT")
     );
 
     const [renameResponse] = await Promise.all([
       renameResponsePromise,
       this.okButton.click(),
     ]);
-    // Validate API response
-    expect([200, 201]).toContain(renameResponse.status());
+
+    expect(renameResponse.status()).toBe(200);
 
     await expect(this.page.getByText("has been renamed")).toBeVisible();
 
@@ -368,34 +368,24 @@ export class ProfileManagementPage {
     // Step 3: Click Remove button
     await this.removeButton.click();
     
-    // Step 4: Click OK button to confirm deletion
+    const deleteResponsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/profiles/") &&
+        resp.request().method() === "DELETE",
+      { timeout: 5_000 }
+    );
+
     await this.okButton.click();
 
-    // DELETE: 200/204 on success; 4xx when profile in use (UI still decides outcome below)
-    let deleteResponse: Awaited<
-      ReturnType<Page["waitForResponse"]>
-    > | null = null;
+    let deleteResponse: Response | null = null;
     try {
-      deleteResponse = await this.page.waitForResponse(
-        (resp) =>
-          resp.url().includes("/api/v1/profiles") &&
-          resp.request().method() === "DELETE",
-        { timeout: 20000 }
-      );
+      deleteResponse = await deleteResponsePromise;
     } catch {
       deleteResponse = null;
     }
 
-    if (deleteResponse !== null) {
-      expect([200, 204, 400, 403, 409, 422]).toContain(
-        deleteResponse.status()
-      );
-    }
-
-    // Step 5: Click body to dismiss any overlays/dropdowns
     await this.page.locator("body").click();
 
-    // Step 6: Wait for success message "Action Summary Success: 1"
     const successMessage = this.page.locator("div").filter({ hasText: "Action Summary Success: 1" });
     const inUseMessage = this.page.locator("div").filter({ hasText: "Profile is used" });
 
@@ -407,8 +397,10 @@ export class ProfileManagementPage {
 
       const isSuccess = await successMessage.nth(3).isVisible().catch(() => false);
       if (isSuccess) {
-        // Validate API response
-        expect(deleteResponse).not.toBeNull();
+        expect(
+          deleteResponse,
+          "DELETE must complete when the UI reports a successful removal"
+        ).not.toBeNull();
         expect([200, 204]).toContain(deleteResponse!.status());
         await successMessage.nth(3).click();
         return true;
@@ -416,12 +408,14 @@ export class ProfileManagementPage {
 
       const isInUse = await inUseMessage.isVisible().catch(() => false);
       if (isInUse) {
-        if (deleteResponse !== null) {
-          expect(deleteResponse.status()).toBeGreaterThanOrEqual(400);
-        }
+        expect(
+          deleteResponse,
+          "DELETE must return when the UI reports profile in use"
+        ).not.toBeNull();
+        expect(deleteResponse!.status()).toBeGreaterThanOrEqual(400);
         return false;
       }
-    } catch (error) {
+    } catch {
       return false;
     }
 
