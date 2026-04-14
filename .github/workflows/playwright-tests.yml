@@ -30,6 +30,8 @@ jobs:
     # Run on push/PR (uses default dev secrets) OR manual dispatch to staging
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.environment == 'staging'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -114,6 +116,8 @@ jobs:
     # Only run when manually triggered with "production" selected
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -247,8 +251,11 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
-          # Get version, default to timestamp if not available
-          VERSION=$(date +%Y%m%d-%H%M%S)
+          # Get version from test job outputs, default to timestamp if not available
+          VERSION="${{ needs.automation-test.outputs.version || needs.automation-test-prod.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(date +%Y%m%d-%H%M%S)
+          fi
           
           echo "📊 Checking existing test runs for version: $VERSION"
           
