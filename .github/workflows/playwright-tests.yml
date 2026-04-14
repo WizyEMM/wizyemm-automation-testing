@@ -15,10 +15,20 @@ on:
         description: 'Release title from Jira'
         required: false
         type: string
+      environment:
+        description: 'Select environment to test'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
 
 
 jobs:
   automation-test:
+    # Run on push/PR (uses default dev secrets) OR manual dispatch to staging
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.environment == 'staging'
     runs-on: ubuntu-latest
 
     steps:
@@ -96,15 +106,129 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: allure-results-login
+          name: allure-results-staging
           path: allure-results/
           retention-days: 7
+
+  automation-test-prod:
+    # Only run when manually triggered with "production" selected
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Clean previous results
+        run: |
+          rm -rf allure-results test-results
+          mkdir -p allure-results test-results
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          REGION: ${{ secrets.PROD_REGION }}
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test 
+          tests/profile 
+          tests/application 
+          tests/configuration 
+          tests/dashboard 
+          tests/fleet 
+          tests/notifications 
+          tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - name: Upload allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-production
+          path: allure-results/
+          retention-days: 7
+
+  upload-report:
+    # Runs after tests complete (regardless of which one ran)
+    if: always()
+    needs: [automation-test, automation-test-prod]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          path: .
+
+      - name: Prepare results
+        run: |
+          # Combine results if multiple jobs ran
+          mkdir -p allure-results combined-results
+          find . -name "allure-results-*" -type d -exec cp -r {}/* allure-results/ \; 2>/dev/null || true
 
       - name: Generate Allure Report
         if: always()
         run: |
           npm install -g allure
-          allure generate allure-results -o allure-report
+          allure generate allure-results -o allure-report || true
 
       - name: Authenticate to Google Cloud
         if: always()
@@ -124,10 +248,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
           # Get version, default to timestamp if not available
-          VERSION="${{ steps.version.outputs.version }}"
-          if [ -z "$VERSION" ]; then
-            VERSION=$(date +%Y%m%d-%H%M%S)
-          fi
+          VERSION=$(date +%Y%m%d-%H%M%S)
           
           echo "📊 Checking existing test runs for version: $VERSION"
           
@@ -193,7 +314,7 @@ jobs:
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
+          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
           ALLURE_REPORT_URL: ${{ steps.gcs_upload.outputs.signed_url }}
           ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
