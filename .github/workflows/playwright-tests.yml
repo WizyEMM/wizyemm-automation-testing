@@ -105,9 +105,12 @@ jobs:
         run: |
           if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
             tar -czf allure-results.tar.gz allure-results/
-            echo "✅ Compressed allure-results ($(du -h allure-results.tar.gz | cut -f1))"
+            SIZE=$(du -h allure-results.tar.gz | cut -f1)
+            echo "✅ Compressed allure-results ($SIZE)"
+            [ -f "allure-results.tar.gz" ] && echo "✓ Archive file verified" || exit 1
           else
             echo "⚠️ No allure-results to compress"
+            touch allure-results.tar.gz
           fi
 
       - name: Upload Allure Results as Artifact (Slack Reporter)
@@ -117,7 +120,6 @@ jobs:
           name: allure-results-staging-${{ github.run_id }}
           path: allure-results.tar.gz
           retention-days: 1
-          if-no-files-found: ignore
 
       - name: Authenticate to Google Cloud
         if: always()
@@ -266,9 +268,12 @@ jobs:
         run: |
           if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
             tar -czf allure-results.tar.gz allure-results/
-            echo "✅ Compressed allure-results ($(du -h allure-results.tar.gz | cut -f1))"
+            SIZE=$(du -h allure-results.tar.gz | cut -f1)
+            echo "✅ Compressed allure-results ($SIZE)"
+            [ -f "allure-results.tar.gz" ] && echo "✓ Archive file verified" || exit 1
           else
             echo "⚠️ No allure-results to compress"
+            touch allure-results.tar.gz
           fi
 
       - name: Upload Allure Results as Artifact (Slack Reporter)
@@ -278,7 +283,6 @@ jobs:
           name: allure-results-production-${{ github.run_id }}
           path: allure-results.tar.gz
           retention-days: 1
-          if-no-files-found: ignore
 
       - name: Extract Test Counts from Allure Report
         if: always()
@@ -393,13 +397,22 @@ jobs:
       - name: Extract Allure Results
         if: always()
         run: |
+          echo "📋 Checking artifacts directory structure:"
+          ls -la artifacts/ || echo "❌ artifacts directory not found"
+          find artifacts -type f || echo "❌ No files found in artifacts"
+          
           if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
             ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
             echo "📦 Found artifact: $ARCHIVE"
+            echo "📊 Archive size: $(du -h "$ARCHIVE")"
             tar -xzf "$ARCHIVE" -C .
             echo "✅ Extracted allure-results"
+            echo "📁 Checking extracted directory:"
+            ls -la allure-results/ | head -20
           else
-            echo "⚠️ No allure-results artifact found, slack-reporter will use empty results"
+            echo "⚠️ No allure-results artifact found"
+            echo "📂 Contents of artifacts directory:"
+            find artifacts -type f -o -type d
           fi
 
       - name: Send Test Report to Slack
