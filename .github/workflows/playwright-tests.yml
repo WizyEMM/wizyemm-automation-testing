@@ -3,10 +3,6 @@ name: Playwright Tests
 on:
   workflow_dispatch:
     inputs:
-      release_title:
-        description: 'Release title from Jira'
-        required: false
-        type: string
       environment:
         description: 'Select environment to test'
         required: true
@@ -410,7 +406,6 @@ jobs:
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
           ALLURE_REPORT_URL: ${{ needs.automation-test.outputs.signed_url || needs.automation-test-prod.outputs.signed_url }}
           ALLURE_VERSION: ${{ needs.automation-test.outputs.report_version || needs.automation-test-prod.outputs.report_version }}
