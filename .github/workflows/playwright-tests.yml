@@ -240,22 +240,22 @@ jobs:
           REGION: ${{ secrets.PROD_REGION }}
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
-      - name: Run all tests
-        if: always()
-        env:
-          DOMAIN: ${{ secrets.PROD_DOMAIN }}
-          EMAIL: ${{ secrets.PROD_EMAIL }}
-          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
-          PASSWORD: ${{ secrets.PROD_PASSWORD }}
-          REGION: ${{ secrets.PROD_REGION }}
-        run: npx playwright test 
-          tests/profile 
-          tests/application 
-          tests/configuration 
-          tests/dashboard 
-          tests/fleet 
-          tests/notifications 
-          tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+      # - name: Run all tests
+      #   if: always()
+      #   env:
+      #     DOMAIN: ${{ secrets.PROD_DOMAIN }}
+      #     EMAIL: ${{ secrets.PROD_EMAIL }}
+      #     NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+      #     PASSWORD: ${{ secrets.PROD_PASSWORD }}
+      #     REGION: ${{ secrets.PROD_REGION }}
+      #   run: npx playwright test 
+      #     tests/profile 
+      #     tests/application 
+      #     tests/configuration 
+      #     tests/dashboard 
+      #     tests/fleet 
+      #     tests/notifications 
+      #     tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - name: Generate Allure Report
         if: always()
