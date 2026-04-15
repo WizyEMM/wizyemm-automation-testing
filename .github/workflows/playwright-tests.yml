@@ -1,11 +1,6 @@
 name: Playwright Tests
 
 on:
-  push:
-    branches:
-      - main
-      - development
-    
   workflow_dispatch:
     inputs:
       release_title:
@@ -24,8 +19,8 @@ on:
 
 jobs:
   automation-test:
-    # Run on push/PR (uses default dev secrets) OR manual dispatch to staging
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.environment == 'staging'
+    # Run on manual dispatch to staging
+    if: github.event.inputs.environment == 'staging'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -166,8 +161,8 @@ jobs:
           echo "report_version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
 
   automation-test-prod:
-    # Only run when manually triggered with "production" selected
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    # Run on manual dispatch to production
+    if: github.event.inputs.environment == 'production'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
