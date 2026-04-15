@@ -3,10 +3,6 @@ name: Playwright Tests
 on:
   workflow_dispatch:
     inputs:
-      release_title:
-        description: 'Release title from Jira'
-        required: false
-        type: string
       environment:
         description: 'Select environment to test'
         required: true
@@ -103,6 +99,25 @@ jobs:
         run: |
           npm install -g allure
           allure generate allure-results -o allure-report || true
+
+      - name: Compress Allure Results for Slack Reporter
+        if: always()
+        run: |
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            tar -czf allure-results.tar.gz allure-results/
+            echo "✅ Compressed allure-results ($(du -h allure-results.tar.gz | cut -f1))"
+          else
+            echo "⚠️ No allure-results to compress"
+          fi
+
+      - name: Upload Allure Results as Artifact (Slack Reporter)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-staging-${{ github.run_id }}
+          path: allure-results.tar.gz
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Authenticate to Google Cloud
         if: always()
@@ -246,6 +261,53 @@ jobs:
           npm install -g allure
           allure generate allure-results -o allure-report || true
 
+      - name: Compress Allure Results for Slack Reporter
+        if: always()
+        run: |
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            tar -czf allure-results.tar.gz allure-results/
+            echo "✅ Compressed allure-results ($(du -h allure-results.tar.gz | cut -f1))"
+          else
+            echo "⚠️ No allure-results to compress"
+          fi
+
+      - name: Upload Allure Results as Artifact (Slack Reporter)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-production-${{ github.run_id }}
+          path: allure-results.tar.gz
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Extract Test Counts from Allure Report
+        if: always()
+        id: test_counts
+        run: |
+          SUMMARY_FILE="allure-report/data/widgets/summary.json"
+          if [ -f "$SUMMARY_FILE" ]; then
+            PASSED=$(jq '.statistic.passed // 0' "$SUMMARY_FILE")
+            FAILED=$(jq '.statistic.failed // 0' "$SUMMARY_FILE")
+            BROKEN=$(jq '.statistic.broken // 0' "$SUMMARY_FILE")
+            SKIPPED=$(jq '.statistic.skipped // 0' "$SUMMARY_FILE")
+            TOTAL=$(jq '.statistic.total // 0' "$SUMMARY_FILE")
+            
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+            echo "broken=$BROKEN" >> $GITHUB_OUTPUT
+            echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            
+            echo "✅ Test counts extracted: Passed=$PASSED, Failed=$FAILED, Broken=$BROKEN, Skipped=$SKIPPED, Total=$TOTAL"
+          else
+            echo "⚠️ summary.json not found, setting counts to 0"
+            echo "passed=0" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "broken=0" >> $GITHUB_OUTPUT
+            echo "skipped=0" >> $GITHUB_OUTPUT
+            echo "total=0" >> $GITHUB_OUTPUT
+          fi
+
       - name: Authenticate to Google Cloud
         if: always()
         id: auth
@@ -321,11 +383,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+          else
+            echo "⚠️ No allure-results artifact found, slack-reporter will use empty results"
+          fi
+
       - name: Send Test Report to Slack
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          RELEASE_TITLE: ${{ github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
           ALLURE_REPORT_URL: ${{ needs.automation-test.outputs.signed_url || needs.automation-test-prod.outputs.signed_url }}
           ALLURE_VERSION: ${{ needs.automation-test.outputs.report_version || needs.automation-test-prod.outputs.report_version }}
