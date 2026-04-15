@@ -107,7 +107,7 @@ jobs:
         with:
           name: allure-results-staging
           path: allure-results/
-          retention-days: 7
+          retention-days: 1
 
   automation-test-prod:
     # Only run when manually triggered with "production" selected
@@ -193,7 +193,7 @@ jobs:
         with:
           name: allure-results-production
           path: allure-results/
-          retention-days: 7
+          retention-days: 1
 
   upload-report:
     # Runs after tests complete (regardless of which one ran)
@@ -330,3 +330,16 @@ jobs:
           
           npm install node-fetch
           node scripts/slack-reporter.js
+
+  cleanup-old-artifacts:
+    # Clean up artifacts older than retention period to avoid quota blocker
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [upload-report]
+    
+    steps:
+      - name: Delete old artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: allure-results-*
+          failOnError: false
