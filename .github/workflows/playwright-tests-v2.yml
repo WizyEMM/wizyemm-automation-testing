@@ -19,6 +19,15 @@ on:
           - staging
           - production
         default: staging
+      test_scope:
+        description: 'Select which tests to run'
+        required: true
+        type: choice
+        options:
+          - 'Login Tests Only'
+          - 'All Tests'
+          - 'Login + All Tests'
+        default: 'All Tests'
 
 jobs:
   # ============= NORMAL INSTANCE - STAGING =============
@@ -59,7 +68,7 @@ jobs:
           fi
 
       - name: Run login tests
-        if: always()
+        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
           EMAIL: ${{ secrets.EMAIL }}
@@ -69,7 +78,7 @@ jobs:
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
-        if: always()
+        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.DOMAIN }}
           EMAIL: ${{ secrets.EMAIL }}
@@ -79,11 +88,13 @@ jobs:
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
+        if: always()
         with:
           instance_type: 'Normal Instance'
           environment: 'staging'
 
       - uses: ./.github/actions/gcs-upload
+        if: always()
         id: gcs_upload
         with:
           version: ${{ steps.version.outputs.version }}
@@ -127,7 +138,7 @@ jobs:
           fi
 
       - name: Run login tests
-        if: always()
+        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.PROD_DOMAIN }}
           EMAIL: ${{ secrets.PROD_EMAIL }}
@@ -137,7 +148,7 @@ jobs:
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
-        if: always()
+        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.PROD_DOMAIN }}
           EMAIL: ${{ secrets.PROD_EMAIL }}
@@ -147,11 +158,13 @@ jobs:
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
+        if: always()
         with:
           instance_type: 'Normal Instance'
           environment: 'production'
 
       - uses: ./.github/actions/gcs-upload
+        if: always()
         id: gcs_upload
         with:
           version: ${{ steps.version.outputs.version }}
@@ -195,7 +208,7 @@ jobs:
           fi
 
       - name: Run login tests
-        if: always()
+        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.JAMF_DOMAIN }}
           EMAIL: ${{ secrets.JAMF_EMAIL }}
@@ -205,7 +218,7 @@ jobs:
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
-        if: always()
+        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.JAMF_DOMAIN }}
           EMAIL: ${{ secrets.JAMF_EMAIL }}
@@ -215,11 +228,13 @@ jobs:
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
+        if: always()
         with:
           instance_type: 'JAMF Instance'
           environment: 'staging'
 
       - uses: ./.github/actions/gcs-upload
+        if: always()
         id: gcs_upload
         with:
           version: ${{ steps.version.outputs.version }}
@@ -263,7 +278,7 @@ jobs:
           fi
 
       - name: Run login tests
-        if: always()
+        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
           EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
@@ -273,7 +288,7 @@ jobs:
         run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
-        if: always()
+        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
         env:
           DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
           EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
@@ -283,11 +298,13 @@ jobs:
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
+        if: always()
         with:
           instance_type: 'JAMF Instance'
           environment: 'production'
 
       - uses: ./.github/actions/gcs-upload
+        if: always()
         id: gcs_upload
         with:
           version: ${{ steps.version.outputs.version }}
