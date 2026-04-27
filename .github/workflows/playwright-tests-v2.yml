@@ -1,0 +1,349 @@
+name: Playwright Tests V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance_type:
+        description: 'Select instance type'
+        required: true
+        type: choice
+        options:
+          - 'Normal Instance'
+          - 'JAMF Instance'
+        default: 'Normal Instance'
+      environment:
+        description: 'Select environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+jobs:
+  # ============= NORMAL INSTANCE - STAGING =============
+  test-normal-staging:
+    if: github.event.inputs.instance_type == 'Normal Instance' && github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          REGION: ${{ secrets.REGION }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL: ${{ secrets.EMAIL }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          REGION: ${{ secrets.REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL: ${{ secrets.EMAIL }}
+          NAMESPACE: ${{ secrets.NAMESPACE }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          REGION: ${{ secrets.REGION }}
+        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - uses: ./.github/actions/generate-report
+        with:
+          instance_type: 'Normal Instance'
+          environment: 'staging'
+
+      - uses: ./.github/actions/gcs-upload
+        id: gcs_upload
+        with:
+          version: ${{ steps.version.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # ============= NORMAL INSTANCE - PRODUCTION =============
+  test-normal-production:
+    if: github.event.inputs.instance_type == 'Normal Instance' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          REGION: ${{ secrets.PROD_REGION }}
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - uses: ./.github/actions/generate-report
+        with:
+          instance_type: 'Normal Instance'
+          environment: 'production'
+
+      - uses: ./.github/actions/gcs-upload
+        id: gcs_upload
+        with:
+          version: ${{ steps.version.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # ============= JAMF INSTANCE - STAGING =============
+  test-jamf-staging:
+    if: github.event.inputs.instance_type == 'JAMF Instance' && github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
+          REGION: ${{ secrets.JAMF_REGION }}
+          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
+          EMAIL: ${{ secrets.JAMF_EMAIL }}
+          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
+          PASSWORD: ${{ secrets.JAMF_PASSWORD }}
+          REGION: ${{ secrets.JAMF_REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
+          EMAIL: ${{ secrets.JAMF_EMAIL }}
+          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
+          PASSWORD: ${{ secrets.JAMF_PASSWORD }}
+          REGION: ${{ secrets.JAMF_REGION }}
+        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - uses: ./.github/actions/generate-report
+        with:
+          instance_type: 'JAMF Instance'
+          environment: 'staging'
+
+      - uses: ./.github/actions/gcs-upload
+        id: gcs_upload
+        with:
+          version: ${{ steps.version.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # ============= JAMF INSTANCE - PRODUCTION =============
+  test-jamf-production:
+    if: github.event.inputs.instance_type == 'JAMF Instance' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
+          REGION: ${{ secrets.JAMF_PROD_REGION }}
+          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
+          
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
+          EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
+          REGION: ${{ secrets.JAMF_PROD_REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
+          EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
+          REGION: ${{ secrets.JAMF_PROD_REGION }}
+        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - uses: ./.github/actions/generate-report
+        with:
+          instance_type: 'JAMF Instance'
+          environment: 'production'
+
+      - uses: ./.github/actions/gcs-upload
+        id: gcs_upload
+        with:
+          version: ${{ steps.version.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # ============= UPLOAD REPORT TO SLACK =============
+  upload-report:
+    if: always()
+    needs: [test-normal-staging, test-normal-production, test-jamf-staging, test-jamf-production]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Checking artifacts directory structure:"
+          ls -la artifacts/ || echo "❌ artifacts directory not found"
+          find artifacts -type f || echo "❌ No files found in artifacts"
+          
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            echo "📊 Archive size: $(du -h "$ARCHIVE")"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+            echo "📁 Checking extracted directory:"
+            ls -la allure-results/ | head -20
+          else
+            echo "⚠️ No allure-results artifact found"
+            echo "📂 Contents of artifacts directory:"
+            find artifacts -type f -o -type d
+          fi
+
+      - name: Send Test Report to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          ALLURE_REPORT_URL: ${{ needs.test-normal-staging.outputs.signed_url || needs.test-normal-production.outputs.signed_url || needs.test-jamf-staging.outputs.signed_url || needs.test-jamf-production.outputs.signed_url }}
+          ALLURE_VERSION: ${{ needs.test-normal-staging.outputs.report_version || needs.test-normal-production.outputs.report_version || needs.test-jamf-staging.outputs.report_version || needs.test-jamf-production.outputs.report_version }}
+        run: |
+          echo "🔍 Environment variables check:"
+          echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
+          echo "  - ALLURE_VERSION: $ALLURE_VERSION"
+          echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
+          
+          npm install node-fetch
+          node scripts/slack-reporter.js
