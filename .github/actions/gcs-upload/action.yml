@@ -1,0 +1,75 @@
+name: 'Upload Report to GCS'
+description: 'Authenticate to GCS, upload Allure report, and generate signed URL'
+
+inputs:
+  version:
+    description: 'App version from API'
+    required: true
+  gcp_sa_key:
+    description: 'GCP Service Account Key'
+    required: true
+
+outputs:
+  signed_url:
+    description: 'Signed URL to Allure report'
+    value: ${{ steps.gcs_upload.outputs.signed_url }}
+  report_version:
+    description: 'Report version identifier'
+    value: ${{ steps.gcs_upload.outputs.report_version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.gcp_sa_key }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Upload Allure Report to GCS (Direct)
+      id: gcs_upload
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        VERSION: ${{ inputs.version }}
+      shell: bash
+      run: |
+        if [ -z "$VERSION" ]; then
+          VERSION=$(date +%Y%m%d-%H%M%S)
+        fi
+        
+        echo "📊 Checking existing test runs for version: $VERSION"
+        
+        FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/allure-reports/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
+        echo "Found folders: $FOLDER_LIST"
+        
+        if [ -z "$FOLDER_LIST" ]; then
+          TEST_RUN=1
+          echo "ℹ️ No existing runs found, starting with Tr.1"
+        else
+          HIGHEST=$(echo "$FOLDER_LIST" | sed 's/.*-Tr\.\([0-9]*\)\/.*/\1/' | sort -n | tail -1)
+          TEST_RUN=$((HIGHEST + 1))
+          echo "ℹ️ Found highest run number: $HIGHEST, next run will be: Tr.$TEST_RUN"
+        fi
+        
+        REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
+        
+        echo "📤 Uploading Allure report to GCS..."
+        gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
+        
+        echo "✅ Report uploaded successfully"
+        
+        npm install @google-cloud/storage -q
+        
+        SIGNED_URL=$(node scripts/generate-signed-url.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" "$REPORT_PATH/index.html" 7)
+        
+        if [ -z "$SIGNED_URL" ] || [[ ! "$SIGNED_URL" =~ ^https:// ]]; then
+          echo "❌ Failed to generate signed URL"
+          exit 1
+        fi
+        
+        echo "✅ Signed URL generated successfully"
+        echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
+        echo "report_version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
