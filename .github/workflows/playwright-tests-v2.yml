@@ -31,6 +31,8 @@ jobs:
       report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-and-deps
 
       - name: Fetch Current Version from API
@@ -97,6 +99,8 @@ jobs:
       report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-and-deps
 
       - name: Fetch Current Version from API
@@ -163,6 +167,8 @@ jobs:
       report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-and-deps
 
       - name: Fetch Current Version from API
@@ -229,6 +235,8 @@ jobs:
       report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: ./.github/actions/setup-and-deps
 
       - name: Fetch Current Version from API
