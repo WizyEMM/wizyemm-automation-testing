@@ -17,6 +17,13 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 
+/** Match npm scripts: `HEADLESS=false` opens a real browser; unset defaults to headless (e.g. CI). */
+function launchHeadless(): boolean {
+  return (
+    process.env.HEADLESS !== "false" && process.env.HEADLESS !== "0"
+  );
+}
+
 const isJamf = process.env.TEST_ENV === JAMF_AUTH_ENV;
 // Resolve path relative to project root (consistent with playwright storageState)
 const STORAGE_STATE_FILE = isJamf
@@ -26,7 +33,7 @@ const STORAGE_STATE_FILE = isJamf
 async function globalSetup(fullConfig: FullConfig) {
   console.log("\n🔐 GLOBAL SETUP: Starting authentication...\n");
 
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ headless: launchHeadless() });
   const context = await browser.newContext();
 
   const authEnv = isJamf ? JAMF_AUTH_ENV : undefined;
