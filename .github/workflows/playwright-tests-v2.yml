@@ -310,10 +310,60 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
 
+  # ============= INGEST TO WIZY REPORT =============
+  ingest-to-wizy-report:
+    if: always()
+    needs: [test-normal-staging, test-normal-production, test-jamf-staging, test-jamf-production]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Extracting Allure results..."
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+          else
+            echo "⚠️ No allure-results artifact found"
+            mkdir -p allure-results
+          fi
+
+      - name: Ingest Test Results to WizyReport
+        if: always()
+        env:
+          WIZY_REPORT_ENDPOINT: ${{ secrets.WIZY_REPORT_ENDPOINT }}
+          WIZY_REPORT_API_KEY: ${{ secrets.WIZY_REPORT_API_KEY }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          INSTANCE_TYPE: ${{ github.event.inputs.instance_type }}
+          EXECUTION_START_TIME: ${{ github.run_started_at }}
+        run: |
+          export EXECUTION_END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "🚀 Starting WizyReport ingestion..."
+          node scripts/wizy-report/ingestor.js
+        continue-on-error: true
+
   # ============= UPLOAD REPORT TO SLACK =============
   upload-report:
     if: always()
-    needs: [test-normal-staging, test-normal-production, test-jamf-staging, test-jamf-production]
+    needs: [test-normal-staging, test-normal-production, test-jamf-staging, test-jamf-production, ingest-to-wizy-report]
     runs-on: ubuntu-latest
 
     steps:
