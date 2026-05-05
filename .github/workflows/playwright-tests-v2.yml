@@ -352,8 +352,8 @@ jobs:
           WIZY_REPORT_ENDPOINT: ${{ secrets.WIZY_REPORT_ENDPOINT }}
           WIZY_REPORT_API_KEY: ${{ secrets.WIZY_REPORT_API_KEY }}
           ENVIRONMENT: ${{ github.event.inputs.environment }}
-          INSTANCE_TYPE: ${{ github.event.inputs.instance_type }}
           EXECUTION_START_TIME: ${{ github.run_started_at }}
+          GCS_REPORT_VERSION: ${{ needs.test-normal-staging.outputs.report_version || needs.test-normal-production.outputs.report_version || needs.test-jamf-staging.outputs.report_version || needs.test-jamf-production.outputs.report_version }}
         run: |
           export EXECUTION_END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "🚀 Starting WizyReport ingestion..."

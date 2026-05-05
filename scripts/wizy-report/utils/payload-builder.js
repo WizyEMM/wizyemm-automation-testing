@@ -1,6 +1,6 @@
 class PayloadBuilder {
   constructor() {
-    this.payload = { runMetadata: {}, testResults: [], summary: {} };
+    this.payload = { runMetadata: {}, tests: [] };
   }
 
   /**
@@ -13,48 +13,31 @@ class PayloadBuilder {
       repositoryName: metadata.repositoryName,
       branch: metadata.branch,
       environment: metadata.environment,
-      instanceType: metadata.instanceType,
       executionStartTime: metadata.executionStartTime,
       executionEndTime: metadata.executionEndTime,
       appVersion: metadata.appVersion || null,
       workflowName: metadata.workflowName || null,
-      triggeredBy: metadata.triggeredBy || 'automated',
     };
     return this;
   }
 
   /**
-   * @param {Array} testResults
+   * @param {Array} tests
    * @returns {PayloadBuilder}
    */
-  setTestResults(testResults) {
-    if (Array.isArray(testResults)) {
-      this.payload.testResults = testResults;
+  setTests(tests) {
+    if (Array.isArray(tests)) {
+      this.payload.tests = tests;
     }
     return this;
   }
 
   /**
-   * @param {Object} testResult
+   * @param {Object} test
    * @returns {PayloadBuilder}
    */
-  addTestResult(testResult) {
-    this.payload.testResults.push(testResult);
-    return this;
-  }
-
-  /**
-   * @param {Object} summary - { total, passed, failed, skipped, flaky }
-   * @returns {PayloadBuilder}
-   */
-  setSummary(summary) {
-    this.payload.summary = {
-      total: summary.total || 0,
-      passed: summary.passed || 0,
-      failed: summary.failed || 0,
-      skipped: summary.skipped || 0,
-      flaky: summary.flaky || 0,
-    };
+  addTest(test) {
+    this.payload.tests.push(test);
     return this;
   }
 
@@ -64,18 +47,10 @@ class PayloadBuilder {
    */
   validate() {
     const errors = [];
-    const { runMetadata, testResults, summary } = this.payload;
+    const { runMetadata, tests } = this.payload;
 
-    for (const field of ['runId', 'repositoryName', 'branch', 'environment', 'executionStartTime', 'executionEndTime']) {
+    for (const field of ['runId', 'repositoryName', 'branch', 'executionStartTime', 'executionEndTime']) {
       if (!runMetadata[field]) errors.push(`runMetadata.${field} is required`);
-    }
-
-    if (runMetadata.environment && !['staging', 'production'].includes(runMetadata.environment)) {
-      errors.push('runMetadata.environment must be "staging" or "production"');
-    }
-
-    if (runMetadata.instanceType && !['Normal Instance', 'JAMF Instance'].includes(runMetadata.instanceType)) {
-      errors.push('runMetadata.instanceType must be "Normal Instance" or "JAMF Instance"');
     }
 
     for (const field of ['executionStartTime', 'executionEndTime']) {
@@ -84,14 +59,15 @@ class PayloadBuilder {
       }
     }
 
-    if (typeof summary.total !== 'number') {
-      errors.push('summary.total is required');
+    if (!Array.isArray(tests) || tests.length === 0) {
+      errors.push('tests must be a non-empty array');
     }
 
     const validStatuses = ['Passed', 'Failed', 'Skipped', 'Flaky', 'Unknown'];
-    testResults.forEach((result, i) => {
-      if (!validStatuses.includes(result.status)) {
-        errors.push(`testResults[${i}].status "${result.status}" must be one of: ${validStatuses.join(', ')}`);
+    tests.forEach((test, i) => {
+      if (!test.testName) errors.push(`tests[${i}].testName is required`);
+      if (!validStatuses.includes(test.status)) {
+        errors.push(`tests[${i}].status "${test.status}" must be one of: ${validStatuses.join(', ')}`);
       }
     });
 

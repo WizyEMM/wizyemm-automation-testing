@@ -6,7 +6,7 @@ const path = require('path');
  * @param {string} [allureResultsDir] - Path to allure-results directory
  * @returns {{ testResults: Array, summary: Object }}
  */
-function parseAllureResults(allureResultsDir) {
+function parseAllureResults(allureResultsDir, artifactsBaseUrl) {
   const resultsDir = allureResultsDir || './allure-results';
 
   if (!fs.existsSync(resultsDir)) {
@@ -42,7 +42,7 @@ function parseAllureResults(allureResultsDir) {
         status,
         duration: Math.max(0, (content.stop || 0) - (content.start || 0)),
         errorMessage: status === 'Failed' ? (content.statusDetails?.message || null) : null,
-        artifacts: status === 'Failed' ? extractArtifacts(content) : null,
+        artifacts: status === 'Failed' ? extractArtifacts(content, artifactsBaseUrl) : [],
       };
 
       testResults.push(result);
@@ -94,23 +94,32 @@ function normalizeStatus(status, labels) {
 }
 
 /**
- * Extracts screenshot and video artifact references from a failed test result.
+ * Extracts artifact references from a failed test result as an array of {type, url}.
+ * Allure stores attachments inside nested steps, not at the root level.
  * @param {Object} content - Allure result JSON content
- * @returns {Object|null}
+ * @returns {Array}
  */
-function extractArtifacts(content) {
-  if (!Array.isArray(content.attachments) || content.attachments.length === 0) return null;
+function extractArtifacts(content, baseUrl) {
+  const artifacts = [];
 
-  const artifacts = {};
-  for (const attachment of content.attachments) {
-    if (!artifacts.screenshot && (attachment.type === 'image/png' || attachment.type === 'image/jpeg')) {
-      artifacts.screenshot = attachment.source;
+  function collectAttachments(node) {
+    if (Array.isArray(node.attachments)) {
+      for (const a of node.attachments) {
+        const url = baseUrl ? `${baseUrl}/${a.source}` : a.source;
+        if (a.type === 'image/png' || a.type === 'image/jpeg') {
+          artifacts.push({ type: 'SCREENSHOT', url });
+        } else if (a.type === 'video/webm' || a.type === 'video/mp4') {
+          artifacts.push({ type: 'VIDEO', url });
+        }
+      }
     }
-    if (!artifacts.video && (attachment.type === 'video/webm' || attachment.type === 'video/mp4')) {
-      artifacts.video = attachment.source;
+    if (Array.isArray(node.steps)) {
+      for (const step of node.steps) collectAttachments(step);
     }
   }
-  return Object.keys(artifacts).length > 0 ? artifacts : null;
+
+  collectAttachments(content);
+  return artifacts;
 }
 
 module.exports = { parseAllureResults, extractSuiteName, normalizeStatus, extractArtifacts };
