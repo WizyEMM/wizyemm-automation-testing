@@ -68,6 +68,9 @@ allure-report/
 test-results/
 playwright-report/
 
+# WizyReport local test output
+scripts/wizy-report/payload-preview.json
+
 .history
 .vscode/
 

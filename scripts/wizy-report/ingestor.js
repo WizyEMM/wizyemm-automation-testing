@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 class WizyReportIngestor {
   constructor() {
-    this.apiEndpoint = process.env.WIZY_REPORT_ENDPOINT || 'http://localhost:3000/api/v1/test-ingestion';
+    this.apiEndpoint = process.env.WIZY_REPORT_ENDPOINT || 'http://localhost:3000/api/v1/runs';
     this.apiKey = process.env.WIZY_REPORT_API_KEY;
   }
 
@@ -20,10 +20,14 @@ class WizyReportIngestor {
       this.validatePrerequisites();
 
       console.log('Parsing Allure test results...');
-      const { testResults, summary } = parseAllureResults();
+      const artifactsBaseUrl = process.env.GCS_REPORT_VERSION
+        ? `https://storage.googleapis.com/emm-test-artifacts/allure-reports/${process.env.GCS_REPORT_VERSION}/data/attachments`
+        : null;
+      if (artifactsBaseUrl) console.log(`Artifact base URL: ${artifactsBaseUrl}`);
+      const { testResults, summary } = parseAllureResults(undefined, artifactsBaseUrl);
 
       console.log('Building ingestion payload...');
-      const builder = this.buildPayload(testResults, summary);
+      const builder = this.buildPayload(testResults);
 
       console.log('Validating payload...');
       const { valid, errors } = builder.validate();
@@ -57,22 +61,19 @@ class WizyReportIngestor {
     }
   }
 
-  buildPayload(testResults, summary) {
+  buildPayload(testResults) {
     return new PayloadBuilder()
       .setRunMetadata({
         runId: process.env.GITHUB_RUN_ID,
         repositoryName: process.env.GITHUB_REPOSITORY || 'wizyemm-automation-testing',
         branch: process.env.GITHUB_REF_NAME,
         environment: process.env.ENVIRONMENT || 'staging',
-        instanceType: process.env.INSTANCE_TYPE || 'Normal Instance',
         executionStartTime: process.env.EXECUTION_START_TIME || new Date().toISOString(),
         executionEndTime: process.env.EXECUTION_END_TIME || new Date().toISOString(),
         appVersion: process.env.APP_VERSION || null,
         workflowName: process.env.GITHUB_WORKFLOW || null,
-        triggeredBy: process.env.GITHUB_ACTOR || 'automated',
       })
-      .setTestResults(testResults)
-      .setSummary(summary);
+      .setTests(testResults);
   }
 
   async sendWithRetry(payload, attempt = 1) {
@@ -93,7 +94,7 @@ class WizyReportIngestor {
       'User-Agent': 'WizyReport-Ingestor/1.0',
     };
     if (this.apiKey) {
-      headers['Authorization'] = `Bearer ${this.apiKey}`;
+      headers['x-api-key'] = this.apiKey;
     }
 
     const controller = new AbortController();
