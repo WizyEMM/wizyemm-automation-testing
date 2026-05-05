@@ -3,7 +3,7 @@
  * Handles login, cache restoration, and session management
  */
 
-import { BrowserContext, Page, expect, Frame } from "@playwright/test";
+import { BrowserContext, Page } from "@playwright/test";
 import config from "../env";
 import {
   saveAuthCache,
@@ -14,67 +14,13 @@ import {
   JAMF_AUTH_ENV,
 } from "./cache";
 import { AuthCacheData, CookieData, TokenData } from "./types";
+import {
+  clickJamfIdSubmit,
+  waitForJamfAppAfterIdp,
+} from "./jamfUi";
 
 // Re-export Jamf env constant for callers that branch on auth mode
 export { JAMF_AUTH_ENV };
-
-/**
- * Locator for Auth0 "Log in using Jamf ID" primary action. Role name can differ by locale/a11y tree;
- * fall back to stable class from Auth0/Jamf hosted page (`_button-login-id`).
- */
-function jamfIdSubmitLocator(root: Page | Frame) {
-  return root
-    .getByRole("button", { name: /Log in using Jamf ID/i })
-    .or(root.getByRole("button", { name: /Jamf ID/i }))
-    .or(root.locator("button._button-login-id"))
-    .or(
-      root.locator(
-        'button[type="submit"][name="action"][value="default"]'
-      )
-    )
-    .or(root.locator("button").filter({ hasText: /Jamf ID/i }));
-}
-
-/**
- * Click Jamf ID submit on main page or inside an Auth0 iframe if present.
- */
-async function clickJamfIdSubmit(
-  page: Page,
-  after: "email" | "password"
-): Promise<void> {
-  const timeout = 45_000;
-  const btnMain = jamfIdSubmitLocator(page).first();
-
-  try {
-    await expect(btnMain).toBeVisible({ timeout });
-    await expect(btnMain).toBeEnabled({ timeout: 20_000 });
-    await btnMain.scrollIntoViewIfNeeded();
-    await btnMain.click();
-    console.log(`✓ Clicked Jamf ID submit (after ${after})`);
-    return;
-  } catch {
-    // Auth0 sometimes renders the form inside an iframe — try non-main frames
-    for (const frame of page.frames()) {
-      if (frame === page.mainFrame()) continue;
-      const btn = jamfIdSubmitLocator(frame).first();
-      try {
-        await expect(btn).toBeVisible({ timeout: 10_000 });
-        await expect(btn).toBeEnabled({ timeout: 15_000 });
-        await btn.scrollIntoViewIfNeeded();
-        await btn.click();
-        console.log(
-          `✓ Clicked Jamf ID submit (after ${after}, in frame ${frame.url().slice(0, 80)}…)`
-        );
-        return;
-      } catch {
-        continue;
-      }
-    }
-    throw new Error(
-      `Jamf ID submit button not found or not clickable after ${after} step`
-    );
-  }
-}
 
 /**
  * Build auth payload from the current page (cookies + storage). Shared by standard and Jamf login.
@@ -193,8 +139,9 @@ export async function performLoginJamf(
 
   await clickJamfIdSubmit(page, "password");
 
-  await page.waitForURL(/dashboard/);
-  console.log("✓ Jamf login successful - redirected to dashboard");
+  // IdP may return to /, /callback, or /#/... — not always a path containing "dashboard".
+  await waitForJamfAppAfterIdp(page, config.baseUrl);
+  console.log("✓ Jamf login successful - back on Manager (post IdP)");
 
   const cacheData = await buildAuthCacheData(page);
   // Pin to jamf cache file even if TEST_ENV were wrong in a subprocess

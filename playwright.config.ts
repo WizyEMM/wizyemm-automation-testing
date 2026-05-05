@@ -4,6 +4,10 @@ import config from './utils/env';
 
 const isJamfEnv = process.env.TEST_ENV === 'jamf';
 
+/** `HEADLESS=false` (npm scripts) -> headed; default headless for CI. */
+const useHeaded =
+  process.env.HEADLESS === 'false' || process.env.HEADLESS === '0';
+
 /** Match globalSetup: Jamf uses user-jamf.json so local runs do not clobber default storage. */
 const storageStatePath = path.resolve(
   __dirname,
@@ -80,7 +84,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     baseURL: config.baseUrl,
     storageState: storageStatePath,
-    //headless: process.env.HEADLESS !== "false",
+    headless: !useHeaded,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
   },
 
