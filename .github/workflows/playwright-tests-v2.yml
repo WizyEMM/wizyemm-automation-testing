@@ -215,7 +215,8 @@ jobs:
           NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
           PASSWORD: ${{ secrets.JAMF_PASSWORD }}
           REGION: ${{ secrets.JAMF_REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+          TEST_ENV: jamf
+        run: npx playwright test --config=playwright.login.jamf.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
         if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
@@ -225,6 +226,7 @@ jobs:
           NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
           PASSWORD: ${{ secrets.JAMF_PASSWORD }}
           REGION: ${{ secrets.JAMF_REGION }}
+          TEST_ENV: jamf
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
@@ -285,7 +287,8 @@ jobs:
           NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
           PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
           REGION: ${{ secrets.JAMF_PROD_REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+          TEST_ENV: jamf
+        run: npx playwright test --config=playwright.login.jamf.config.ts --reporter=line,allure-playwright
 
       - name: Run all tests
         if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
@@ -295,6 +298,7 @@ jobs:
           NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
           PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
           REGION: ${{ secrets.JAMF_PROD_REGION }}
+          TEST_ENV: jamf
         run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
       - uses: ./.github/actions/generate-report
