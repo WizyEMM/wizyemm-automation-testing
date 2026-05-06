@@ -22,7 +22,7 @@ export const loginJamfWithInvalidCredentials = async ({
 }) => {
   await page.goto(config.baseUrl);
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
   } catch {
     // landing may already be on IdP
   }
