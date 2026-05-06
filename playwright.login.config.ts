@@ -28,6 +28,7 @@ export default defineConfig({
     ['html'],
     ['allure-playwright']
   ],
+  
   /* Shared settings - NO globalSetup, NO storageState */
   use: {
     video: "on",
