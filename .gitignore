@@ -81,6 +81,7 @@ scripts/wizy-report/payload-preview.json
 # Authentication & Session Caches (SENSITIVE)
 # These are generated locally or in CI/CD and should NOT be committed
 Cookies/auth-cache.json
+Cookies/auth-cache-jamf.json
 user/.auth/user.json
 user/
 
