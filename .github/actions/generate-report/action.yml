@@ -1,0 +1,40 @@
+name: 'Generate and Compress Report'
+description: 'Generate Allure report and compress results for Slack reporter'
+
+inputs:
+  instance_type:
+    description: 'Instance type (Normal Instance or JAMF Instance)'
+    required: true
+  environment:
+    description: 'Environment (staging or production)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate Allure Report
+      run: |
+        npm install -g allure
+        allure generate allure-results -o allure-report || true
+      shell: bash
+
+    - name: Compress Allure Results for Slack Reporter
+      run: |
+        if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+          tar -czf allure-results.tar.gz allure-results/
+          SIZE=$(du -h allure-results.tar.gz | cut -f1)
+          echo "✅ Compressed allure-results ($SIZE)"
+          [ -f "allure-results.tar.gz" ] && echo "✓ Archive file verified" || exit 1
+        else
+          echo "⚠️ No allure-results to compress"
+          touch allure-results.tar.gz
+        fi
+      shell: bash
+
+    - name: Upload Allure Results as Artifact (Slack Reporter)
+      uses: actions/upload-artifact@v4
+      with:
+        name: allure-results-${{ inputs.instance_type }}-${{ inputs.environment }}-${{ github.run_id }}
+        path: allure-results.tar.gz
+        retention-days: 1
+

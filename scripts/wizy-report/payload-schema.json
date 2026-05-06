@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WizyReport Test Result Ingestion Payload",
+  "description": "Schema for test result ingestion into WizyReport system",
+  "type": "object",
+  "required": ["runMetadata", "testResults", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "runMetadata": {
+      "type": "object",
+      "required": ["runId", "repositoryName", "branch", "environment", "executionStartTime", "executionEndTime"],
+      "additionalProperties": false,
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "GitHub Actions run ID — unique identifier for this test run"
+        },
+        "repositoryName": {
+          "type": "string",
+          "description": "Repository name (e.g., wizyemm-automation-testing)"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch where tests were executed"
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["staging", "production"],
+          "description": "Target environment for tests"
+        },
+        "instanceType": {
+          "type": "string",
+          "enum": ["Normal Instance", "JAMF Instance"],
+          "description": "Type of MDM instance being tested"
+        },
+        "executionStartTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when test execution started"
+        },
+        "executionEndTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when test execution completed"
+        },
+        "appVersion": {
+          "type": ["string", "null"],
+          "description": "Version of the application under test"
+        },
+        "workflowName": {
+          "type": ["string", "null"],
+          "description": "GitHub Actions workflow name"
+        },
+        "triggeredBy": {
+          "type": "string",
+          "description": "User or system that triggered the workflow"
+        }
+      }
+    },
+    "testResults": {
+      "type": "array",
+      "description": "Individual test case results",
+      "items": {
+        "type": "object",
+        "required": ["suiteName", "testName", "status", "duration"],
+        "additionalProperties": false,
+        "properties": {
+          "suiteName": {
+            "type": "string",
+            "description": "Test suite name"
+          },
+          "testName": {
+            "type": "string",
+            "description": "Individual test case name"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Passed", "Failed", "Skipped", "Flaky", "Unknown"],
+            "description": "Test execution status"
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Test duration in milliseconds"
+          },
+          "errorMessage": {
+            "type": ["string", "null"],
+            "description": "Error message for failed tests"
+          },
+          "artifacts": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Test artifacts — only included for failed tests",
+                "properties": {
+                  "screenshot": {
+                    "type": "string",
+                    "description": "Path or GCS URL to screenshot"
+                  },
+                  "video": {
+                    "type": "string",
+                    "description": "Path or GCS URL to video recording"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "passed", "failed", "skipped"],
+      "additionalProperties": false,
+      "description": "Aggregated test execution statistics",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "flaky": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

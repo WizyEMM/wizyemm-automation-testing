@@ -1,0 +1,25 @@
+name: 'Setup and Install Dependencies'
+description: 'Checkout code, setup Node.js, install dependencies and Playwright browsers'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+      shell: bash
+
+    - name: Clean previous results
+      run: |
+        rm -rf allure-results test-results
+        mkdir -p allure-results test-results
+      shell: bash

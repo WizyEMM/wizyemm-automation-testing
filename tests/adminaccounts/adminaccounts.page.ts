@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from "@playwright/test";
+import { Page, Locator, expect, Response } from "@playwright/test";
 import { adminAccountsData } from "./adminaccountsdata";
 import {
   applyAdminRoleFilters,
@@ -8,6 +8,10 @@ import {
   buildAdminEmail,
 } from "./adminaccounts.helpers";
 
+/**
+ * Admin Accounts: search/refresh GET 200, create POST 201, DELETE 5s + 200/204; navigate uses URL + table
+ * (list GET may be skipped on client-side nav — see navigateToAdminAccounts).
+ */
 export interface AdminUser {
   firstName: string;
   lastName: string;
@@ -34,6 +38,12 @@ export class AdminAccountsPage {
   private readonly roleDropdown: Locator;
   private readonly profileInput: Locator;
   private readonly profileLabelInput: Locator;
+
+  /** Browser list route (e.g. staging …/admin-accounts) — skip redundant list GET when already here. */
+  private isOnAdministratorsListPage(): boolean {
+    const path = new URL(this.page.url()).pathname.replace(/\/$/, "") || "/";
+    return path === "/admin-accounts";
+  }
 
   constructor(page: Page) {
     this.page = page;
@@ -276,11 +286,21 @@ export class AdminAccountsPage {
   }
 
   async navigateToAdminAccounts(): Promise<void> {
-    await this.page
-      .getByRole("link", {
-        name: adminAccountsData.navigation.adminAccountsLink,
-      })
-      .click();
+    if (this.isOnAdministratorsListPage()) {
+      await waitForAdminTable(this.page);
+      return;
+    }
+
+    // URL + table — client nav may not refetch list (cache) or may return 304; mandatory GET+200 caused timeouts.
+    await Promise.all([
+      this.page.waitForURL(/\/admin-accounts$/),
+      this.page
+        .getByRole("link", {
+          name: adminAccountsData.navigation.adminAccountsLink,
+        })
+        .click(),
+    ]);
+    await waitForAdminTable(this.page);
   }
 
   async sortByColumn(columnName: string, times: number = 3): Promise<void> {
@@ -343,7 +363,17 @@ export class AdminAccountsPage {
   }
 
   async submitUserCreation(): Promise<void> {
-    await this.okButton.click();
+    // POST create + assert 201 (aligned with profile create flow).
+    const [createResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/administrators") &&
+          resp.request().method() === "POST" &&
+          resp.status() === 201
+      ),
+      this.okButton.click(),
+    ]);
+    expect(createResponse.status()).toBe(201);
     await this.page.locator('[role="dialog"]').waitFor({
       state: "detached",
       timeout: 10000,
@@ -378,14 +408,19 @@ export class AdminAccountsPage {
   }
 
   async searchUser(email: string): Promise<void> {
-    await this.searchInput.click();
-    await this.searchInput.fill(email);
-    await this.page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/v1/administrators") &&
-        resp.status() === 200 &&
-        resp.request().method() === "GET"
-    );
+    const [searchResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/administrators") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      (async () => {
+        await this.searchInput.click();
+        await this.searchInput.fill(email);
+      })(),
+    ]);
+    expect(searchResponse.status()).toBe(200);
   }
 
   async selectUserByName(firstName: string, lastName: string): Promise<void> {
@@ -404,18 +439,41 @@ export class AdminAccountsPage {
 
   async deleteSelectedUser(): Promise<void> {
     await this.removeButton.click();
-    await this.okButton.click();
-    //wait for delete API response
-    await this.page.waitForResponse(
+
+    const deleteResponsePromise = this.page.waitForResponse(
       (resp) =>
-        resp.url().includes("/api/v1/administrators") &&
-        resp.status() === 204 &&
-        resp.request().method() === "DELETE"
+        resp.url().includes("/api/v1/administrators/") &&
+        resp.request().method() === "DELETE",
+      { timeout: 5_000 }
     );
+
+    await this.okButton.click();
+
+    let deleteResponse: Response | null = null;
+    try {
+      deleteResponse = await deleteResponsePromise;
+    } catch {
+      deleteResponse = null;
+    }
+
+    expect(
+      deleteResponse,
+      "DELETE must complete when removing an administrator"
+    ).not.toBeNull();
+    expect([200, 204]).toContain(deleteResponse!.status());
   }
 
   async refreshTable(): Promise<void> {
-    await this.refreshButton.click();
+    const [refreshResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/v1/administrators") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
+      ),
+      this.refreshButton.click(),
+    ]);
+    expect(refreshResponse.status()).toBe(200);
   }
 
   async verifyUserExists(email: string): Promise<void> {
