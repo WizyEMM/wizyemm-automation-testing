@@ -1,11 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
 import config from './utils/env';
 
 /**
- * Standalone config for JAMF login tests
- * This does NOT use globalSetup - each test handles its own JAMF login
+ * Config for JAMF login tests
+ * Uses globalSetup for authentication and caches auth in user-jamf.json
+ * Tests reuse cached sessions to eliminate redundant re-login
  */
+
+/** JAMF uses user-jamf.json storage state (kept separate from default user.json) */
+const storageStatePath = path.resolve(__dirname, 'user/.auth/user-jamf.json');
+
 export default defineConfig({
+  globalSetup: './utils/authManager/globalSetup.ts',
   testDir: './tests/login',
   testMatch: ['**/login.jamf.spec.ts'],
   /* Run tests in files in parallel */
@@ -28,13 +35,13 @@ export default defineConfig({
     ['html'],
     ['allure-playwright']
   ],
-  /* Shared settings - NO globalSetup, NO storageState */
+  /* Shared settings with globalSetup + cached storageState */
   use: {
     video: "on",
     screenshot: "on",
     trace: 'on-first-retry',
     baseURL: config.baseUrl,
-    // NO storageState - tests will login manually
+    storageState: storageStatePath,
   },
 
   /* Configure projects for major browsers */
