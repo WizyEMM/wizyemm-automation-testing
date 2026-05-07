@@ -107,7 +107,7 @@ export async function performLoginJamf(
   console.log(`✓ Navigated to ${config.baseUrl}`);
 
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     console.log("✓ Clicked Login button");
   } catch (error) {
     console.log("ℹ Login button not found, continuing...");
