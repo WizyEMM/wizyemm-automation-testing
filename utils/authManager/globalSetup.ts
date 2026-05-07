@@ -32,6 +32,9 @@ const STORAGE_STATE_FILE = isJamf
 
 async function globalSetup(fullConfig: FullConfig) {
   console.log("\n🔐 GLOBAL SETUP: Starting authentication...\n");
+  console.log(`📌 TEST_ENV: ${process.env.TEST_ENV || "NOT SET (using default instance)"}`);
+  console.log(`📌 JAMF Mode: ${isJamf}`);
+  console.log(`📌 Storage State Path: ${STORAGE_STATE_FILE}\n`);
 
   const browser = await chromium.launch({ headless: launchHeadless() });
   const context = await browser.newContext();
