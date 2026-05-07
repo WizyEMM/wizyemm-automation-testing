@@ -71,7 +71,7 @@ export async function performLogin(
 
   // Click Login button to go to login form
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     console.log("✓ Clicked Login button");
   } catch (error) {
     console.log("ℹ Login button not found, continuing...");
@@ -320,6 +320,7 @@ export async function setupAuth(
         console.log(`⏳ Waiting for localStorage to populate...`);
         let localStoragePopulated = false;
         for (let i = 0; i < 10; i++) {
+          // @ts-ignore - window is available in page.evaluate() browser context
           const hasStorage = await page.evaluate(() => {
             const keys = Object.keys(window.localStorage);
             return keys.length > 0;
@@ -341,6 +342,7 @@ export async function setupAuth(
         console.log(`↻ Capturing storage state from login page for JAMF...`);
         
         // Extract and manually add localStorage to storage state
+        // @ts-ignore - window is available in page.evaluate() browser context
         const localStorageData = await page.evaluate(() => {
           const data: Record<string, string> = {};
           for (let i = 0; i < window.localStorage.length; i++) {
