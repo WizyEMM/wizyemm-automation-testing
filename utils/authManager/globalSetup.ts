@@ -32,6 +32,9 @@ const STORAGE_STATE_FILE = isJamf
 
 async function globalSetup(fullConfig: FullConfig) {
   console.log("\n🔐 GLOBAL SETUP: Starting authentication...\n");
+  console.log(`📌 TEST_ENV: ${process.env.TEST_ENV || "NOT SET (using default instance)"}`);
+  console.log(`📌 JAMF Mode: ${isJamf}`);
+  console.log(`📌 Storage State Path: ${STORAGE_STATE_FILE}\n`);
 
   const browser = await chromium.launch({ headless: launchHeadless() });
   const context = await browser.newContext();
@@ -50,17 +53,54 @@ async function globalSetup(fullConfig: FullConfig) {
       await setupAuth(context, config.email, config.password, authEnv);
     }
 
-    // Save Playwright storage state for test contexts to load
-    const page = await context.newPage();
-    await page.goto(`${config.baseUrl}/dashboard`);
+    // For normal instance: capture storage state from fresh page
+    // For JAMF: setupAuth already captured it from login page
+    if (!isJamf) {
+      // Save Playwright storage state for test contexts to load
+      const page = await context.newPage();
+      
+      // Navigate to baseUrl first to ensure domain sets session cookies
+      await page.goto(`${config.baseUrl}`, { waitUntil: "domcontentloaded" });
+      console.log(`✓ Navigated to base URL`);
+      
+      // Then navigate to dashboard to ensure full session establishment
+      await page.goto(`${config.baseUrl}/dashboard`, { waitUntil: "domcontentloaded" });
+      console.log(`✓ Navigated to dashboard`);
+      
+      // Give the app a moment to fully populate localStorage after navigation
+      await page.waitForTimeout(2000).catch(() => {});
 
-    const storageDir = path.dirname(STORAGE_STATE_FILE);
-    if (!fs.existsSync(storageDir)) {
-      fs.mkdirSync(storageDir, { recursive: true });
+      const storageDir = path.dirname(STORAGE_STATE_FILE);
+      if (!fs.existsSync(storageDir)) {
+        fs.mkdirSync(storageDir, { recursive: true });
+      }
+
+      await context.storageState({ path: STORAGE_STATE_FILE });
+      await page.close();
     }
 
-    await context.storageState({ path: STORAGE_STATE_FILE });
-    await page.close();
+    // Log summary of what was saved
+    const storageStatePath = isJamf 
+      ? path.resolve(__dirname, "../../user/.auth/user-jamf.json")
+      : STORAGE_STATE_FILE;
+    
+    if (fs.existsSync(storageStatePath)) {
+      const storageState = JSON.parse(fs.readFileSync(storageStatePath, "utf-8"));
+      console.log(`\n📊 Storage State Summary:`);
+      console.log(`  Cookies: ${storageState.cookies?.length || 0}`);
+      console.log(`  Origins: ${storageState.origins?.length || 0}`);
+      if (storageState.cookies && storageState.cookies.length > 0) {
+        const domains = [...new Set(storageState.cookies.map((c: any) => c.domain))];
+        console.log(`  Cookie domains: ${domains.join(", ")}`);
+        console.log(`  Cookie names: ${storageState.cookies.map((c: any) => c.name).join(", ")}`);
+      }
+      if (storageState.origins && storageState.origins.length > 0) {
+        storageState.origins.forEach((origin: any) => {
+          const storageCount = origin.localStorage?.length || 0;
+          console.log(`  Origin ${origin.origin}: ${storageCount} localStorage items`);
+        });
+      }
+    }
 
     console.log("✓ Auth ready\n");
   } catch (error) {
