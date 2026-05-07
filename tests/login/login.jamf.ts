@@ -1,13 +1,29 @@
 import { expect, Page, Frame } from "@playwright/test";
 import config from "../../utils/env";
-import { performLoginJamf } from "../../utils/authManager/index";
+import { performLoginJamf, restoreAuthFromCache } from "../../utils/authManager/index";
+import { loadAuthCache, isAuthCacheValid, JAMF_AUTH_ENV } from "../../utils/authManager/cache";
 import { clickJamfIdSubmit } from "../../utils/authManager/jamfUi";
 
 function jamfHostedRoots(page: Page): (Page | Frame)[] {
   return [page, ...page.frames().filter((f) => f !== page.mainFrame())];
 }
 
+/**
+ * Login helper that checks cache first before attempting fresh login.
+ * If valid auth cache exists, skips login (already loaded via storage state).
+ * If cache invalid/missing, performs fresh Jamf login.
+ * Change: Cache-aware to eliminate redundant re-login when running with cached sessions.
+ */
 export const loginJamf = async ({ page }: { page: Page }) => {
+  const cache = loadAuthCache(JAMF_AUTH_ENV);
+  const isCacheValid = isAuthCacheValid(cache);
+
+  if (isCacheValid) {
+    console.log("✓ Auth cache valid, skipping login (already authenticated via storage state)");
+    return;
+  }
+
+  console.log("↻ Auth cache invalid/expired, performing fresh login...");
   await performLoginJamf(page, config.email, config.password);
 };
 

@@ -12,8 +12,9 @@ test.describe.configure({ timeout: 120_000 });
 const isJamf = process.env.TEST_ENV === JAMF_AUTH_ENV;
 
 test.describe("Jamf login", () => {
-  /** Spec-level login must not reuse globalSetup storage (mirrors unauthenticated flows in login.spec.ts). */
-  test.use({ storageState: { cookies: [], origins: [] } });
+  /** Spec-level login uses globalSetup cached storage (same as normal instance). */
+  // Removed: test.use({ storageState: { cookies: [], origins: [] } });
+  // Now tests reuse cached auth from globalSetup → user-jamf.json
 
   test.beforeEach(({}, testInfo) => {
     testInfo.skip(!isJamf, "Set TEST_ENV=jamf (e.g. npm run test:jamf)");
