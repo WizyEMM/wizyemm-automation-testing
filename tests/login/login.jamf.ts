@@ -60,7 +60,7 @@ export const loginJamfWithInvalidCredentials = async ({
 export const forgotPasswordJamf = async ({ page }: { page: Page }) => {
   await page.goto(config.baseUrl);
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
   } catch {
     /* already on login */
   }
