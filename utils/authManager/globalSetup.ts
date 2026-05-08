@@ -37,7 +37,7 @@ async function globalSetup(fullConfig: FullConfig) {
   console.log(`📌 Storage State Path: ${STORAGE_STATE_FILE}\n`);
 
   const browser = await chromium.launch({ headless: launchHeadless() });
-  const context = await browser.newContext();
+  const context = await browser.newContext({ locale: "en-US" });
 
   const authEnv = isJamf ? JAMF_AUTH_ENV : undefined;
 
