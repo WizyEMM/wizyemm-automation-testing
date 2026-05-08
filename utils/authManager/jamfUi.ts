@@ -9,13 +9,12 @@ import { Page, expect, Frame } from "@playwright/test";
  */
 export function jamfIdSubmitLocator(root: Page | Frame) {
   return root
-    .getByRole("button", { name: /Log in using Jamf ID/i })
-    .or(root.getByRole("button", { name: /Jamf ID/i }))
+    .locator('button[type="submit"][name="action"][value="default"]')
+    .or(root.locator("button").filter({ hasText: /Log in using Jamf ID/i }))
+    .or(root.locator("button").filter({ hasText: /Jamf ID/i }))
     .or(root.locator("button._button-login-id"))
-    .or(
-      root.locator('button[type="submit"][name="action"][value="default"]')
-    )
-    .or(root.locator("button").filter({ hasText: /Jamf ID/i }));
+    .or(root.getByRole("button", { name: /Log in using Jamf ID/i }))
+    .or(root.getByRole("button", { name: /Jamf ID/i }));
 }
 
 /**
@@ -42,6 +41,16 @@ export async function clickJamfIdSubmit(
     return;
   } catch (error) {
     console.log(`❌ Failed to click button on main page: ${error}`);
+    
+    // Debug: log all buttons on main page
+    const allButtons = await page.locator("button").all();
+    console.log(`📋 Found ${allButtons.length} buttons on main page:`);
+    for (let i = 0; i < Math.min(allButtons.length, 10); i++) {
+      const text = await allButtons[i].textContent();
+      const visible = await allButtons[i].isVisible();
+      console.log(`   [${i}] "${text}" (visible: ${visible})`);
+    }
+    
     console.log(`⏳ Searching for button in iframes...`);
     
     for (const frame of page.frames()) {
