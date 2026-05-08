@@ -30,14 +30,13 @@ export async function clickJamfIdSubmit(
 
   try {
     console.log(`⏳ Waiting for Jamf ID button to appear (after ${after})...`);
-    await expect(btnMain).toBeVisible({ timeout });
+    await btnMain.waitFor({ state: "visible", timeout });
     console.log(`✓ Jamf ID button visible`);
     
-    console.log(`⏳ Waiting for Jamf ID button to be enabled...`);
-    await expect(btnMain).toBeEnabled({ timeout: 20_000 });
-    console.log(`✓ Jamf ID button enabled`);
-    
+    console.log(`⏳ Scrolling and clicking...`);
     await btnMain.scrollIntoViewIfNeeded();
+    // Add a small delay to ensure form is ready
+    await page.waitForTimeout(300);
     await btnMain.click();
     console.log(`✓ Clicked Jamf ID submit (after ${after})`);
     return;
@@ -49,9 +48,9 @@ export async function clickJamfIdSubmit(
       if (frame === page.mainFrame()) continue;
       const btn = jamfIdSubmitLocator(frame).first();
       try {
-        await expect(btn).toBeVisible({ timeout: 10_000 });
-        await expect(btn).toBeEnabled({ timeout: 15_000 });
+        await btn.waitFor({ state: "visible", timeout: 10_000 });
         await btn.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
         await btn.click();
         console.log(
           `✓ Clicked Jamf ID submit (after ${after}, in frame ${frame.url().slice(0, 80)}…)`
