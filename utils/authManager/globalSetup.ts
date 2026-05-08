@@ -9,6 +9,7 @@ import { chromium, FullConfig } from "@playwright/test";
 import config from "../env";
 import {
   setupAuth,
+  clearAuth,
   loadAuthCache,
   isAuthCacheValid,
   restoreAuthFromCache,
@@ -46,8 +47,20 @@ async function globalSetup(fullConfig: FullConfig) {
     const isCacheValid = isAuthCacheValid(cache);
 
     if (isCacheValid) {
-      console.log("✓ Using cached auth");
-      await restoreAuthFromCache(context, authEnv);
+      if (isJamf && !fs.existsSync(STORAGE_STATE_FILE)) {
+        // Auth0 cookies are valid but user-jamf.json is missing.
+        // Clear auth cache so setupAuth skips restoreAuthFromCache and does a full fresh login,
+        // which is the only path that saves user-jamf.json with the complete OAuth session.
+        console.log("↻ user-jamf.json not found, clearing cache to force fresh login...");
+        await clearAuth(JAMF_AUTH_ENV);
+        await setupAuth(context, config.email, config.password, authEnv);
+      } else {
+        console.log("✓ Using cached auth");
+        await restoreAuthFromCache(context, authEnv);
+        // For Jamf: user-jamf.json already has the full session from the last fresh login
+        // (including the app-domain is.authenticated cookies set during the OAuth callback).
+        // Do NOT overwrite it here — restoreAuthFromCache only restores the 4 Auth0 cookies.
+      }
     } else {
       console.log("↻ Performing login...");
       await setupAuth(context, config.email, config.password, authEnv);
