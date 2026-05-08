@@ -159,8 +159,8 @@ export async function performLoginJamf(
   // This ensures localStorage has time to populate before we capture it
   
   const cacheData = await buildAuthCacheData(page);
-  // Pin to jamf cache file even if TEST_ENV were wrong in a subprocess
-  saveAuthCache(cacheData, JAMF_AUTH_ENV);
+  // NOTE: Do NOT save cache here - only setupAuth/globalSetup should save
+  // This allows login tests to run without creating cache files
   return cacheData;
 }
 
@@ -302,8 +302,14 @@ export async function setupAuth(
   if (!restored) {
     const page = await context.newPage();
     try {
+      let cacheData: AuthCacheData | undefined;
+      
       if (authEnv === JAMF_AUTH_ENV) {
-        await performLoginJamf(page, email, password);
+        cacheData = await performLoginJamf(page, email, password);
+        // Save auth cache for JAMF (so next globalSetup can reuse it)
+        if (cacheData) {
+          saveAuthCache(cacheData, JAMF_AUTH_ENV);
+        }
       } else {
         await performLogin(page, email, password);
       }
