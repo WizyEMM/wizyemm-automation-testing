@@ -29,13 +29,22 @@ export async function clickJamfIdSubmit(
   const btnMain = jamfIdSubmitLocator(page).first();
 
   try {
+    console.log(`⏳ Waiting for Jamf ID button to appear (after ${after})...`);
     await expect(btnMain).toBeVisible({ timeout });
+    console.log(`✓ Jamf ID button visible`);
+    
+    console.log(`⏳ Waiting for Jamf ID button to be enabled...`);
     await expect(btnMain).toBeEnabled({ timeout: 20_000 });
+    console.log(`✓ Jamf ID button enabled`);
+    
     await btnMain.scrollIntoViewIfNeeded();
     await btnMain.click();
     console.log(`✓ Clicked Jamf ID submit (after ${after})`);
     return;
-  } catch {
+  } catch (error) {
+    console.log(`❌ Failed to click button on main page: ${error}`);
+    console.log(`⏳ Searching for button in iframes...`);
+    
     for (const frame of page.frames()) {
       if (frame === page.mainFrame()) continue;
       const btn = jamfIdSubmitLocator(frame).first();
