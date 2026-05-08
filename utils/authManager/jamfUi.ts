@@ -10,10 +10,7 @@ import { Page, expect, Frame } from "@playwright/test";
  * Priority: visible buttons with "jamf id" text (language-agnostic) first
  */
 export function jamfIdSubmitLocator(root: Page | Frame) {
-  return root
-    .locator('button:visible').filter({ hasText: /jamf\s*id/i })
-    .or(root.locator('button:visible').filter({ hasText: /jamf/i }))
-    .or(root.getByRole("button", { name: /jamf/i }));
+  return root.getByRole("button", { name: "Log in using Jamf ID" });
 }
 
 /**
