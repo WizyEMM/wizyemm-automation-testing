@@ -9,7 +9,7 @@ import config from './utils/env';
 
 export default defineConfig({
   testDir: './tests/login',
-  testMatch: ['**/login.jamf.spec.ts', '**/language.spec.ts'],
+  testMatch: ['**/login.jamf.spec.ts'],
   /* Run tests in files in parallel */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

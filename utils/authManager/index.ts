@@ -159,8 +159,7 @@ export async function performLoginJamf(
   // This ensures localStorage has time to populate before we capture it
   
   const cacheData = await buildAuthCacheData(page);
-  // NOTE: Do NOT save cache here - only setupAuth/globalSetup should save
-  // This allows login tests to run without creating cache files
+
   return cacheData;
 }
 
