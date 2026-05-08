@@ -8,13 +8,7 @@ import { Page, expect, Frame } from "@playwright/test";
  * Locator for Auth0 "Log in using Jamf ID" primary action.
  */
 export function jamfIdSubmitLocator(root: Page | Frame) {
-  return root
-    .locator('button[type="submit"][name="action"][value="default"]')
-    .or(root.locator("button").filter({ hasText: /Log in using Jamf ID/i }))
-    .or(root.locator("button").filter({ hasText: /Jamf ID/i }))
-    .or(root.locator("button._button-login-id"))
-    .or(root.getByRole("button", { name: /Log in using Jamf ID/i }))
-    .or(root.getByRole("button", { name: /Jamf ID/i }));
+  return root.getByRole("button", { name: "Log in using Jamf ID"});
 }
 
 /**
@@ -32,10 +26,10 @@ export async function clickJamfIdSubmit(
     await btnMain.waitFor({ state: "visible", timeout });
     console.log(`✓ Jamf ID button visible`);
     
-    console.log(`⏳ Scrolling and clicking...`);
-    await btnMain.scrollIntoViewIfNeeded();
-    // Add a small delay to ensure form is ready
-    await page.waitForTimeout(300);
+    console.log(`⏳ Clicking Jamf ID button...`);
+    // Don't use force or waitForNavigation - just click
+    // If after email: form transitions (no navigation)
+    // If after password: may trigger navigation to callback/app
     await btnMain.click();
     console.log(`✓ Clicked Jamf ID submit (after ${after})`);
     return;
@@ -58,8 +52,6 @@ export async function clickJamfIdSubmit(
       const btn = jamfIdSubmitLocator(frame).first();
       try {
         await btn.waitFor({ state: "visible", timeout: 10_000 });
-        await btn.scrollIntoViewIfNeeded();
-        await page.waitForTimeout(300);
         await btn.click();
         console.log(
           `✓ Clicked Jamf ID submit (after ${after}, in frame ${frame.url().slice(0, 80)}…)`

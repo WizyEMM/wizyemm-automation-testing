@@ -145,8 +145,20 @@ export async function performLoginJamf(
 
   await clickJamfIdSubmit(page, "email");
 
-  await page.waitForSelector("#password", { state: "visible", timeout: 60_000 });
-  await page.fill("#password", password);
+  // Wait for form to transition from email step to password step
+  // The email field should disappear or become hidden when the form switches
+  console.log("⏳ Waiting for form to transition to password step...");
+  await emailInput.waitFor({ state: "hidden", timeout: 30_000 }).catch(() => {
+    console.log("ℹ Email field didn't hide, continuing...");
+  });
+  await page.waitForTimeout(500); // Give form a moment to render password field
+
+  // Wait for password field with flexible selectors (may be in iframe)
+  const passwordInput = page
+    .locator('input[type="password"], input[name="password"], #password')
+    .first();
+  await passwordInput.waitFor({ state: "visible", timeout: 60_000 });
+  await passwordInput.fill(password);
   console.log("✓ Filled password");
 
   await clickJamfIdSubmit(page, "password");
