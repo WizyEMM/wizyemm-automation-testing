@@ -6,9 +6,14 @@ import { Page, expect, Frame } from "@playwright/test";
 
 /**
  * Locator for Auth0 "Log in using Jamf ID" primary action.
+ * Must handle multiple languages (English, German, etc.)
+ * Priority: visible buttons with "jamf id" text (language-agnostic) first
  */
 export function jamfIdSubmitLocator(root: Page | Frame) {
-  return root.getByRole("button", { name: "Log in using Jamf ID"});
+  return root
+    .locator('button:visible').filter({ hasText: /jamf\s*id/i })
+    .or(root.locator('button:visible').filter({ hasText: /jamf/i }))
+    .or(root.getByRole("button", { name: /jamf/i }));
 }
 
 /**
