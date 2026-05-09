@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../_base/jamfTest";
 import config from "../../../utils/env";
 import { ApplicationsPage } from "../shared/applications.page";
 import { PersonalAppsPage } from "../shared/personalapplications.page";

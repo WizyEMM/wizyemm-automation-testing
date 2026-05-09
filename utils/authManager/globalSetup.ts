@@ -38,10 +38,13 @@ async function globalSetup(fullConfig: FullConfig) {
   console.log(`📌 Storage State Path: ${STORAGE_STATE_FILE}\n`);
 
   const browser = await chromium.launch({ headless: launchHeadless() });
-  const context = await browser.newContext({ locale: "en-US" });
+  const context = await browser.newContext(
+    isJamf ? { locale: "en-US" } : {}
+  );
 
   const authEnv = isJamf ? JAMF_AUTH_ENV : undefined;
 
+  let didFreshLogin = false;
   try {
     const cache = loadAuthCache(authEnv);
     const isCacheValid = isAuthCacheValid(cache);
@@ -54,6 +57,7 @@ async function globalSetup(fullConfig: FullConfig) {
         console.log("↻ user-jamf.json not found, clearing cache to force fresh login...");
         await clearAuth(JAMF_AUTH_ENV);
         await setupAuth(context, config.email, config.password, authEnv);
+        didFreshLogin = true;
       } else {
         console.log("✓ Using cached auth");
         await restoreAuthFromCache(context, authEnv);
@@ -64,10 +68,29 @@ async function globalSetup(fullConfig: FullConfig) {
     } else {
       console.log("↻ Performing login...");
       await setupAuth(context, config.email, config.password, authEnv);
+      didFreshLogin = true;
+    }
+
+    if (isJamf && didFreshLogin) {
+      const warmupPage = await context.newPage();
+      try {
+        console.log("⏳ Warming up Jamf session (navigating to dashboard)...");
+        await warmupPage.goto(`${config.baseUrl}/dashboard`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+        await warmupPage.waitForTimeout(3000); // let Auth0 SDK finish any silent token refresh
+        const storageDir = path.dirname(STORAGE_STATE_FILE);
+        if (!fs.existsSync(storageDir)) {
+          fs.mkdirSync(storageDir, { recursive: true });
+        }
+        await context.storageState({ path: STORAGE_STATE_FILE });
+        console.log("✓ user-jamf.json updated after Auth0 SDK warmup");
+      } catch (e) {
+        console.log(`ℹ Dashboard warmup skipped: ${e}`);
+      } finally {
+        await warmupPage.close();
+      }
     }
 
     // For normal instance: capture storage state from fresh page
-    // For JAMF: setupAuth already captured it from login page
     if (!isJamf) {
       // Save Playwright storage state for test contexts to load
       const page = await context.newPage();
