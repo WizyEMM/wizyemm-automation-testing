@@ -29,9 +29,6 @@ export async function clickJamfIdSubmit(
     console.log(`✓ Jamf ID button visible`);
     
     console.log(`⏳ Clicking Jamf ID button...`);
-    // Don't use force or waitForNavigation - just click
-    // If after email: form transitions (no navigation)
-    // If after password: may trigger navigation to callback/app
     await btnMain.click();
     console.log(`✓ Clicked Jamf ID submit (after ${after})`);
     return;
