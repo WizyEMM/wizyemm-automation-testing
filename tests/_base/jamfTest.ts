@@ -12,22 +12,59 @@
  */
 import { test as base, expect } from "@playwright/test";
 import * as path from "path";
+import config from "../../utils/env";
 
 const JAMF_STORAGE_STATE = path.resolve(
   __dirname,
   "../../user/.auth/user-jamf.json"
 );
 
+const FIREBASE_TOKEN_TIMEOUT_MS = 15_000;
+
+function isAppUrl(currentUrl: string): boolean {
+  try {
+    return new URL(currentUrl).origin === new URL(config.baseUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
 export const test = base.extend({
   context: async ({ context }, use) => {
     await use(context);
-    if (process.env.TEST_ENV === "jamf") {
-      try {
-        await context.storageState({ path: JAMF_STORAGE_STATE });
-      } catch {
-        // Context already closed (e.g. test crashed) — nothing to persist.
+    if (process.env.TEST_ENV !== "jamf") return;
+    try {
+      const state = await context.storageState();
+      const stillAuthenticated = state.cookies.some(
+        (c) => c.name.includes("is.authenticated") && c.value === "true"
+      );
+      if (stillAuthenticated) {
+        const fs = require("fs") as typeof import("fs");
+        fs.writeFileSync(JAMF_STORAGE_STATE, JSON.stringify(state, null, 2));
       }
+    } catch {
     }
+  },
+
+
+  page: async ({ page }, use) => {
+    if (process.env.TEST_ENV === "jamf") {
+      const originalGoto = page.goto.bind(page);
+      page.goto = async (url, opts) => {
+        const response = await originalGoto(url, opts);
+        if (isAppUrl(page.url())) {
+          await page
+            .waitForFunction(
+              () => (window as any).FIREBASE_TOKEN !== undefined,
+              { timeout: FIREBASE_TOKEN_TIMEOUT_MS }
+            )
+            .catch(() => {
+            });
+        }
+        return response;
+      };
+    }
+    await use(page);
   },
 });
 
