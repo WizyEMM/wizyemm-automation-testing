@@ -1,4 +1,4 @@
-import { test, expect } from "../_base/jamfTest";
+import { test, expect } from "@playwright/test";
 import config from "../../utils/env";
 import { forgotPassword, loginLocal, loginLocalWithInvalidCredentials } from "./login";
 

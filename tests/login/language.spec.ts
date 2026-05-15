@@ -1,4 +1,4 @@
-import { test, expect } from "../_base/jamfTest";
+import { test } from "@playwright/test";
 import config from "../../utils/env";
 import { LanguageSwitchPage } from "./language.page";
 import { languageTestData } from "./languagedata";
