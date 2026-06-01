@@ -24,10 +24,10 @@ class WizyReportIngestor {
         ? `https://storage.googleapis.com/emm-test-artifacts/allure-reports/${process.env.GCS_REPORT_VERSION}/data/attachments`
         : null;
       if (artifactsBaseUrl) console.log(`Artifact base URL: ${artifactsBaseUrl}`);
-      const { testResults, summary } = parseAllureResults(undefined, artifactsBaseUrl);
+      const { testResults, summary, executionStartTime, executionEndTime } = parseAllureResults(undefined, artifactsBaseUrl);
 
       console.log('Building ingestion payload...');
-      const builder = this.buildPayload(testResults, summary);
+      const builder = this.buildPayload(testResults, summary, executionStartTime, executionEndTime);
 
       console.log('Validating payload...');
       const { valid, errors } = builder.validate();
@@ -63,15 +63,15 @@ class WizyReportIngestor {
     }
   }
 
-  buildPayload(testResults, summary) {
+  buildPayload(testResults, summary, executionStartTime, executionEndTime) {
     return new PayloadBuilder()
       .setRunMetadata({
-        runId: process.env.GITHUB_RUN_ID,
+        runId: process.env.GCS_REPORT_VERSION || process.env.GITHUB_RUN_ID,
         repositoryName: process.env.GITHUB_REPOSITORY || 'wizyemm-automation-testing',
         branch: process.env.GITHUB_REF_NAME,
         environment: process.env.ENVIRONMENT || 'staging',
-        executionStartTime: process.env.EXECUTION_START_TIME || new Date().toISOString(),
-        executionEndTime: process.env.EXECUTION_END_TIME || new Date().toISOString(),
+        executionStartTime: executionStartTime || process.env.EXECUTION_START_TIME || new Date().toISOString(),
+        executionEndTime: executionEndTime || process.env.EXECUTION_END_TIME || new Date().toISOString(),
         appVersion: process.env.APP_VERSION || null,
         workflowName: process.env.GITHUB_WORKFLOW || null,
       })

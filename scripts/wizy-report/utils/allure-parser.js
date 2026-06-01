@@ -27,6 +27,8 @@ function parseAllureResults(allureResultsDir, artifactsBaseUrl) {
 
   const testResults = [];
   const summary = emptyStats();
+  let minStart = Infinity;
+  let maxStop = -Infinity;
 
   for (const file of resultFiles) {
     try {
@@ -35,6 +37,9 @@ function parseAllureResults(allureResultsDir, artifactsBaseUrl) {
 
       if (!content?.name) continue;
 
+      if (content.start) minStart = Math.min(minStart, content.start);
+      if (content.stop) maxStop = Math.max(maxStop, content.stop);
+
       const status = normalizeStatus(content.status, content.labels);
       const result = {
         suiteName: extractSuiteName(content),
@@ -42,7 +47,7 @@ function parseAllureResults(allureResultsDir, artifactsBaseUrl) {
         status,
         duration: Math.max(0, (content.stop || 0) - (content.start || 0)),
         errorMessage: status === 'Failed' ? (content.statusDetails?.message || null) : null,
-        artifacts: status === 'Failed' ? extractArtifacts(content, artifactsBaseUrl) : [],
+        artifacts: extractArtifacts(content, artifactsBaseUrl),
       };
 
       testResults.push(result);
@@ -54,8 +59,11 @@ function parseAllureResults(allureResultsDir, artifactsBaseUrl) {
     }
   }
 
+  const executionStartTime = minStart !== Infinity ? new Date(minStart).toISOString() : null;
+  const executionEndTime = maxStop !== -Infinity ? new Date(maxStop).toISOString() : null;
+
   console.log(`Summary: ${summary.passed} passed, ${summary.failed} failed, ${summary.skipped} skipped, ${summary.flaky} flaky`);
-  return { testResults, summary };
+  return { testResults, summary, executionStartTime, executionEndTime };
 }
 
 function emptyStats() {
