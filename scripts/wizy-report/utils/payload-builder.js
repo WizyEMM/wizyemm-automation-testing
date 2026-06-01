@@ -1,6 +1,6 @@
 class PayloadBuilder {
   constructor() {
-    this.payload = { runMetadata: {}, tests: [] };
+    this.payload = { runMetadata: {}, testResults: [], summary: {} };
   }
 
   /**
@@ -27,8 +27,23 @@ class PayloadBuilder {
    */
   setTests(tests) {
     if (Array.isArray(tests)) {
-      this.payload.tests = tests;
+      this.payload.testResults = tests;
     }
+    return this;
+  }
+
+  /**
+   * @param {Object} summary - { total, passed, failed, skipped, flaky }
+   * @returns {PayloadBuilder}
+   */
+  setSummary(summary) {
+    this.payload.summary = {
+      total: summary.total || 0,
+      passed: summary.passed || 0,
+      failed: summary.failed || 0,
+      skipped: summary.skipped || 0,
+      flaky: summary.flaky || 0,
+    };
     return this;
   }
 
@@ -37,7 +52,7 @@ class PayloadBuilder {
    * @returns {PayloadBuilder}
    */
   addTest(test) {
-    this.payload.tests.push(test);
+    this.payload.testResults.push(test);
     return this;
   }
 
@@ -47,7 +62,7 @@ class PayloadBuilder {
    */
   validate() {
     const errors = [];
-    const { runMetadata, tests } = this.payload;
+    const { runMetadata, testResults: tests } = this.payload;
 
     for (const field of ['runId', 'repositoryName', 'branch', 'executionStartTime', 'executionEndTime']) {
       if (!runMetadata[field]) errors.push(`runMetadata.${field} is required`);
