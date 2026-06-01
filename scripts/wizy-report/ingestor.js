@@ -137,6 +137,7 @@ class WizyReportIngestor {
 
     if (!res.ok) {
       // 4xx client errors: don't retry, fail immediately
+      console.error(`Server response body: ${JSON.stringify(body, null, 2)}`);
       throw Object.assign(
         new Error(`Client error (${res.status}): ${body.message || 'Bad request'}`),
         { fatal: true }
