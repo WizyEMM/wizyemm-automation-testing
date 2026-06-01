@@ -358,6 +358,7 @@ jobs:
           ENVIRONMENT: ${{ github.event.inputs.environment }}
           EXECUTION_START_TIME: ${{ github.run_started_at }}
           GCS_REPORT_VERSION: ${{ needs.test-normal-staging.outputs.report_version || needs.test-normal-production.outputs.report_version || needs.test-jamf-staging.outputs.report_version || needs.test-jamf-production.outputs.report_version }}
+          APP_VERSION: ${{ needs.test-normal-staging.outputs.version || needs.test-normal-production.outputs.version || needs.test-jamf-staging.outputs.version || needs.test-jamf-production.outputs.version }}
         run: |
           echo "🚀 Starting WizyReport ingestion..."
           node scripts/wizy-report/ingestor.js
