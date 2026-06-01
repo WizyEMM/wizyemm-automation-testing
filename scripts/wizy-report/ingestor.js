@@ -27,7 +27,7 @@ class WizyReportIngestor {
       const { testResults, summary } = parseAllureResults(undefined, artifactsBaseUrl);
 
       console.log('Building ingestion payload...');
-      const builder = this.buildPayload(testResults);
+      const builder = this.buildPayload(testResults, summary);
 
       console.log('Validating payload...');
       const { valid, errors } = builder.validate();
@@ -37,8 +37,10 @@ class WizyReportIngestor {
         process.exit(1);
       }
 
+      const payload = builder.build();
+      console.log(`Execution window: ${payload.runMetadata.executionStartTime} → ${payload.runMetadata.executionEndTime}`);
       console.log('Sending to WizyReport API...');
-      const data = await this.sendWithRetry(builder.build());
+      const data = await this.sendWithRetry(payload);
       console.log(`Test results successfully ingested! Run ID: ${data.runId || process.env.GITHUB_RUN_ID}`);
       process.exit(0);
     } catch (error) {
@@ -61,7 +63,7 @@ class WizyReportIngestor {
     }
   }
 
-  buildPayload(testResults) {
+  buildPayload(testResults, summary) {
     return new PayloadBuilder()
       .setRunMetadata({
         runId: process.env.GITHUB_RUN_ID,
@@ -73,7 +75,8 @@ class WizyReportIngestor {
         appVersion: process.env.APP_VERSION || null,
         workflowName: process.env.GITHUB_WORKFLOW || null,
       })
-      .setTests(testResults);
+      .setTests(testResults)
+      .setSummary(summary);
   }
 
   async sendWithRetry(payload, attempt = 1) {
