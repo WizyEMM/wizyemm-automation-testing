@@ -58,8 +58,19 @@ runs:
         
         echo "📤 Uploading Allure report to GCS..."
         gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
-        
+
         echo "✅ Report uploaded successfully"
+
+        # Also upload the raw allure-results attachments so the WizyReport
+        # ingestor's source-based URLs (<uuid>-attachment.ext) resolve. The
+        # awesome plugin renames attachments to content hashes in allure-report,
+        # but the ingest job only has allure-results and references the original
+        # source names. Uploading them here (alongside the renamed copies) keeps
+        # both the Allure viewer and WizyReport previews working.
+        if ls allure-results/*-attachment.* >/dev/null 2>&1; then
+          echo "📎 Uploading raw allure-results attachments for WizyReport..."
+          gcloud storage cp allure-results/*-attachment.* "gs://emm-test-artifacts/$REPORT_PATH/data/attachments/" || true
+        fi
         
         npm install @google-cloud/storage -q
         
