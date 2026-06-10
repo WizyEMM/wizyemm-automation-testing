@@ -42,7 +42,7 @@ runs:
         NAMESPACE: ${{ inputs.namespace }}
         DOMAIN: ${{ inputs.domain }}
       run: |
-        if [ -z "$NAMESPACE" ] || [ -z "$DOMAIN" ]; then
+        if [ -z "$NAMESPACE" ] || [ "$NAMESPACE" = "false" ] || [ -z "$DOMAIN" ] || [ "$DOMAIN" = "false" ]; then
           echo "❌ Resolved NAMESPACE/DOMAIN is empty."
           echo "   The selected instance/environment has no secrets configured in GitHub."
           echo "   (Prod-EU requires JAMF_PROD_EU_* secrets to be added first.)"
