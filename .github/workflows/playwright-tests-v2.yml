@@ -61,9 +61,8 @@ jobs:
                 || github.event.inputs.environment == 'staging' && secrets.DOMAIN ) }}
           email: >-
             ${{ github.event.inputs.instance_type == 'JAMF Instance'
-              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_EMAIL
-                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_EMAIL
-                || github.event.inputs.environment == 'staging' && secrets.JAMF_EMAIL )
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_EMAIL
+                || secrets.JAMF_PROD_EMAIL )
               || ( github.event.inputs.environment == 'production' && secrets.PROD_EMAIL
                 || github.event.inputs.environment == 'staging' && secrets.EMAIL ) }}
           namespace: >-
@@ -75,9 +74,8 @@ jobs:
                 || github.event.inputs.environment == 'staging' && secrets.NAMESPACE ) }}
           password: >-
             ${{ github.event.inputs.instance_type == 'JAMF Instance'
-              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_PASSWORD
-                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_PASSWORD
-                || github.event.inputs.environment == 'staging' && secrets.JAMF_PASSWORD )
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_PASSWORD
+                || secrets.JAMF_PROD_PASSWORD )
               || ( github.event.inputs.environment == 'production' && secrets.PROD_PASSWORD
                 || github.event.inputs.environment == 'staging' && secrets.PASSWORD ) }}
           region: >-
