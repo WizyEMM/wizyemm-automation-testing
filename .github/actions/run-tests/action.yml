@@ -74,7 +74,7 @@ runs:
         fi
 
     - name: Run login tests
-      if: always() && (inputs.test_scope == 'Login Tests Only' || inputs.test_scope == 'Login + All Tests')
+      if: inputs.test_scope == 'Login Tests Only' || inputs.test_scope == 'Login + All Tests'
       shell: bash
       env:
         DOMAIN: ${{ inputs.domain }}
