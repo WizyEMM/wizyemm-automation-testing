@@ -2,12 +2,10 @@ name: 'Generate and Compress Report'
 description: 'Generate Allure report and compress results for Slack reporter'
 
 inputs:
-  instance_type:
-    description: 'Instance type (Normal Instance or JAMF Instance)'
-    required: true
-  environment:
-    description: 'Environment (staging or production)'
-    required: true
+  instance:
+    description: 'Instance/environment name (used in the artifact name so parallel runs stay distinct)'
+    required: false
+    default: 'default'
 
 runs:
   using: 'composite'
@@ -34,7 +32,7 @@ runs:
     - name: Upload Allure Results as Artifact (Slack Reporter)
       uses: actions/upload-artifact@v4
       with:
-        name: allure-results-${{ inputs.instance_type }}-${{ inputs.environment }}-${{ github.run_id }}
+        name: allure-results-${{ inputs.instance }}-${{ github.run_id }}
         path: allure-results.tar.gz
         retention-days: 1
 

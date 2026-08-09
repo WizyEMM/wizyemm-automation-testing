@@ -1,0 +1,164 @@
+name: _run-instance (reusable)
+
+# Reusable engine for running the Playwright suite against ONE instance.
+# Callers select the instance by passing its GitHub Environment name; secrets
+# (NAMESPACE/REGION/DOMAIN/EMAIL/PASSWORD) and variables (INSTANCE_TYPE,
+# SUITE_TYPE) resolve automatically from that Environment — no ternary needed.
+
+on:
+  workflow_call:
+    inputs:
+      instance:
+        description: 'GitHub Environment name of the target instance (e.g. team-a, prod-na, jamf-prod-us)'
+        required: true
+        type: string
+      test_scope:
+        description: 'Login Tests Only | All Tests | Login + All Tests'
+        required: true
+        type: string
+
+jobs:
+  # ============ RUN TESTS (secrets/vars resolved from the Environment) ============
+  test:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.instance }}
+    outputs:
+      version: ${{ steps.run.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Run tests
+        id: run
+        uses: ./.github/actions/run-tests
+        with:
+          # SUITE_TYPE=login-only forces login scope regardless of the picked scope.
+          test_scope: ${{ vars.SUITE_TYPE == 'login-only' && 'Login Tests Only' || inputs.test_scope }}
+          # INSTANCE_TYPE=jamf selects the Jamf login config + TEST_ENV=jamf.
+          login_config: ${{ vars.INSTANCE_TYPE == 'jamf' && 'playwright.login.jamf.config.ts' || 'playwright.login.config.ts' }}
+          test_env: ${{ vars.INSTANCE_TYPE == 'jamf' && 'jamf' || '' }}
+          # Connection details come from the Environment's secrets.
+          domain: ${{ secrets.DOMAIN }}
+          email: ${{ secrets.EMAIL }}
+          namespace: ${{ secrets.NAMESPACE }}
+          password: ${{ secrets.PASSWORD }}
+          region: ${{ secrets.REGION }}
+
+      - uses: ./.github/actions/generate-report
+        if: always()
+        with:
+          instance: ${{ inputs.instance }}
+
+      - uses: ./.github/actions/gcs-upload
+        if: always()
+        id: gcs_upload
+        with:
+          version: ${{ steps.run.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+          instance: ${{ inputs.instance }}
+
+  # ============ INGEST TO WIZYREPORT ============
+  ingest-to-wizy-report:
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Extracting Allure results..."
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+          else
+            echo "⚠️ No allure-results artifact found"
+            mkdir -p allure-results
+          fi
+
+      - name: Ingest Test Results to WizyReport
+        if: always()
+        env:
+          WIZY_REPORT_ENDPOINT: ${{ secrets.WIZY_REPORT_ENDPOINT }}
+          WIZY_REPORT_API_KEY: ${{ secrets.WIZY_REPORT_API_KEY }}
+          # All new team/regional/jamf-staging instances are staging; prod-* and
+          # jamf-prod-* are production. Keeps the WizyReport enum (staging|production) valid.
+          ENVIRONMENT: ${{ (startsWith(inputs.instance, 'prod-') || startsWith(inputs.instance, 'jamf-prod')) && 'production' || 'staging' }}
+          INSTANCE: ${{ inputs.instance }}
+          EXECUTION_START_TIME: ${{ github.run_started_at }}
+          GCS_REPORT_VERSION: ${{ needs.test.outputs.report_version }}
+          APP_VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          echo "🚀 Starting WizyReport ingestion for instance: $INSTANCE"
+          node scripts/wizy-report/ingestor.js
+        continue-on-error: true
+
+  # ============ SLACK REPORT ============
+  upload-report:
+    if: always()
+    needs: [test, ingest-to-wizy-report]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+          else
+            echo "⚠️ No allure-results artifact found"
+          fi
+
+      - name: Send Test Report to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          INSTANCE: ${{ inputs.instance }}
+          ALLURE_REPORT_URL: ${{ needs.test.outputs.signed_url }}
+          ALLURE_VERSION: ${{ needs.test.outputs.report_version }}
+        run: |
+          echo "🔍 Reporting for instance: $INSTANCE"
+          npm install node-fetch
+          node scripts/slack-reporter.js

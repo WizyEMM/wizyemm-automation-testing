@@ -171,6 +171,7 @@ async function sendSlackReport() {
     const GITHUB_HEAD_REF = process.env.GITHUB_HEAD_REF || '';
     const ALLURE_REPORT_URL = process.env.ALLURE_REPORT_URL;
     const ALLURE_VERSION = process.env.ALLURE_VERSION || 'Unknown';
+    const INSTANCE = process.env.INSTANCE || '';
     
     if (!ALLURE_REPORT_URL) {
       console.error('❌ ALLURE_REPORT_URL is required');
@@ -214,6 +215,10 @@ async function sendSlackReport() {
       ? replacePlaceholders(config.messages.reportHeaderTemplate.withRelease, { releaseTitle: RELEASE_TITLE })
       : replacePlaceholders(config.messages.reportHeaderTemplate.withoutRelease, { timestamp: getFormattedTimestamp() });
     
+    // Prefix the instance so a matrix run's messages are clearly distinguishable.
+    if (INSTANCE) {
+      reportHeader = `[${INSTANCE}] ${reportHeader}`;
+    }
     reportHeader += ` | ${ALLURE_VERSION}`;
 
     // Get test statistics from Allure v3 results
