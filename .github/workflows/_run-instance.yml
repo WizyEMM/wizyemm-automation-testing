@@ -80,7 +80,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: allure-results-*-${{ github.run_id }}
+          # Scope to THIS instance so a matrix run (shared run_id) never grabs
+          # another instance's artifact. generate-report names it
+          # allure-results-<instance>-<run_id>.
+          pattern: allure-results-${{ inputs.instance }}-${{ github.run_id }}
 
       - name: Extract Allure Results
         if: always()
@@ -136,7 +139,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: allure-results-*-${{ github.run_id }}
+          # Scope to THIS instance so a matrix run (shared run_id) never grabs
+          # another instance's artifact. generate-report names it
+          # allure-results-<instance>-<run_id>.
+          pattern: allure-results-${{ inputs.instance }}-${{ github.run_id }}
 
       - name: Extract Allure Results
         if: always()
@@ -156,6 +162,8 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
           INSTANCE: ${{ inputs.instance }}
+          # Route the Slack channel by the instance's environment, not the git branch.
+          REPORT_ENVIRONMENT: ${{ (startsWith(inputs.instance, 'prod-') || startsWith(inputs.instance, 'jamf-prod')) && 'production' || 'staging' }}
           ALLURE_REPORT_URL: ${{ needs.test.outputs.signed_url }}
           ALLURE_VERSION: ${{ needs.test.outputs.report_version }}
         run: |

@@ -9,9 +9,9 @@ inputs:
     description: 'GCP Service Account Key'
     required: true
   instance:
-    description: 'Instance/environment name (used to namespace the report path so parallel runs never collide)'
+    description: 'Instance/environment name. When set, namespaces the report path (allure-reports/<instance>/...) so parallel runs never collide. When empty, keeps the legacy flat path (allure-reports/...) so the still-live v2 workflow is unaffected.'
     required: false
-    default: 'default'
+    default: ''
 
 outputs:
   signed_url:
@@ -45,12 +45,18 @@ runs:
           VERSION=$(date +%Y%m%d-%H%M%S)
         fi
 
-        # Namespace reports by instance so parallel/matrix runs never overwrite
-        # each other and each instance keeps its own history/trend.
-        INSTANCE="${INSTANCE:-default}"
-        INSTANCE_DIR="allure-reports/${INSTANCE}"
+        # When an instance is given, namespace reports under it so parallel/matrix
+        # runs never overwrite each other and each keeps its own history/trend.
+        # When empty (legacy v2), keep the original flat path unchanged.
+        if [ -n "$INSTANCE" ]; then
+          INSTANCE_DIR="allure-reports/${INSTANCE}"
+          REPORT_PREFIX="${INSTANCE}/"
+        else
+          INSTANCE_DIR="allure-reports"
+          REPORT_PREFIX=""
+        fi
 
-        echo "📊 Checking existing test runs for instance '${INSTANCE}', version: $VERSION"
+        echo "📊 Checking existing test runs for '${INSTANCE:-<legacy>}', version: $VERSION"
 
         FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/${INSTANCE_DIR}/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
         echo "Found folders: $FOLDER_LIST"
@@ -93,7 +99,8 @@ runs:
         
         echo "✅ Signed URL generated successfully"
         echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
-        # report_version is the path segment after allure-reports/ — it now
-        # includes the instance folder so WizyReport attachment URLs
+        # report_version is the path segment after allure-reports/ — it includes
+        # the instance folder (when set) so WizyReport attachment URLs
         # (.../allure-reports/${report_version}/data/attachments) still resolve.
-        echo "report_version=${INSTANCE}/v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+        # For legacy v2 (no instance) REPORT_PREFIX is empty -> unchanged output.
+        echo "report_version=${REPORT_PREFIX}v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT

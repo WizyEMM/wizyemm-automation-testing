@@ -83,12 +83,26 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
-      # Green-check: a failing test case must NOT fail the workflow. Playwright's
-      # non-zero exit is swallowed here; the real pass/fail is still captured in
-      # the Allure report and the Slack summary. Infra/setup steps stay honest.
+      # Green-check: failing TEST CASES must not red the workflow, but a real
+      # crash (missing browsers, bad config, spec syntax error) must still fail.
+      # We tell them apart by whether new Allure result files were produced:
+      # results present + non-zero exit = tests ran and some failed (stay green);
+      # no new results + non-zero exit = nothing ran (crash) -> fail loudly.
       run: |
-        npx playwright test --config=${{ inputs.login_config }} --reporter=line,allure-playwright \
-          || echo "⚠️ Login tests reported failures — captured in Allure/Slack (workflow stays green)."
+        BEFORE=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        set +e
+        npx playwright test --config=${{ inputs.login_config }} --reporter=line,allure-playwright
+        CODE=$?
+        set -e
+        AFTER=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        if [ "$CODE" -ne 0 ]; then
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            echo "⚠️ Login tests reported failures — captured in Allure/Slack (workflow stays green)."
+          else
+            echo "❌ Login run produced no results (exit $CODE) — treating as crash/config/infra error."
+            exit "$CODE"
+          fi
+        fi
 
     - name: Run all tests
       if: always() && (inputs.test_scope == 'All Tests' || inputs.test_scope == 'Login + All Tests')
@@ -100,7 +114,19 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
-      # Green-check: failing test cases do not fail the workflow (see note above).
+      # Green-check with crash detection (see note on the login step above).
       run: |
-        npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=firefox --reporter=line,allure-playwright \
-          || echo "⚠️ Some tests reported failures — captured in Allure/Slack (workflow stays green)."
+        BEFORE=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        set +e
+        npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=firefox --reporter=line,allure-playwright
+        CODE=$?
+        set -e
+        AFTER=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        if [ "$CODE" -ne 0 ]; then
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            echo "⚠️ Some tests reported failures — captured in Allure/Slack (workflow stays green)."
+          else
+            echo "❌ Test run produced no results (exit $CODE) — treating as crash/config/infra error."
+            exit "$CODE"
+          fi
+        fi

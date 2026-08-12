@@ -192,17 +192,26 @@ async function sendSlackReport() {
       process.exit(1);
     }
 
-    // Determine which channel to use based on branch
+    // Determine which channel to use.
+    // Preferred (V3): route by the instance's environment passed as REPORT_ENVIRONMENT.
+    // Fallback (legacy v2, no REPORT_ENVIRONMENT): route by git branch as before.
     function getSlackChannel() {
-      // Check if we're on development branch (staging) or production (main/production)
+      const reportEnv = (process.env.REPORT_ENVIRONMENT || '').toLowerCase();
+      if (reportEnv === 'production') {
+        console.log('🚀 Instance environment is production - using production channel');
+        return config.slack.channel; // Production channel from config
+      }
+      if (reportEnv === 'staging') {
+        console.log('🔄 Instance environment is staging - using staging channel');
+        return 'C0AA2U56LKT'; // Staging channel
+      }
+
+      // Legacy fallback: branch-based routing (v2 does not set REPORT_ENVIRONMENT)
       const branchRef = GITHUB_REF || '';
-      
-      // If development branch → staging channel
       if (branchRef.includes('development')) {
         console.log('🔄 Detected development branch - using staging channel');
         return 'C0AA2U56LKT'; // Staging channel
       } else {
-        // main, production, or any other branch → production channel
         console.log('🚀 Using production channel');
         return config.slack.channel; // Production channel from config
       }
