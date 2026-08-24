@@ -1,13 +1,47 @@
 import { expect, Page, Frame } from "@playwright/test";
 import config from "../../utils/env";
-import { performLoginJamf } from "../../utils/authManager/index";
+import { performLoginJamf, restoreAuthFromCache } from "../../utils/authManager/index";
+import { loadAuthCache, isAuthCacheValid, JAMF_AUTH_ENV } from "../../utils/authManager/cache";
 import { clickJamfIdSubmit } from "../../utils/authManager/jamfUi";
+import fs from "fs";
+import path from "path";
 
 function jamfHostedRoots(page: Page): (Page | Frame)[] {
   return [page, ...page.frames().filter((f) => f !== page.mainFrame())];
 }
 
+/**
+ * Login helper that checks cache first before attempting fresh login.
+ * If valid auth cache exists, navigates to baseUrl to use cached session (via storage state).
+ * If cache invalid/missing, performs fresh Jamf login.
+ * Change: Cache-aware to eliminate redundant re-login when running with cached sessions.
+ */
 export const loginJamf = async ({ page }: { page: Page }) => {
+  const storageStatePath = path.resolve(__dirname, "../../user/.auth/user-jamf.json");
+  const storageStateExists = fs.existsSync(storageStatePath);
+  console.log(`\n📁 Checking storage state at: ${storageStatePath}`);
+  console.log(`📁 Storage state exists: ${storageStateExists}\n`);
+
+  const cache = loadAuthCache(JAMF_AUTH_ENV);
+  const isCacheValid = isAuthCacheValid(cache);
+
+  if (isCacheValid && storageStateExists) {
+    console.log("✓ Auth cache valid + storage state exists");
+    console.log("✓ Navigating to dashboard with cached session...");
+    // Navigate to baseUrl to trigger Playwright's storage state auto-load
+    await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
+    console.log("✓ Loaded with cached storage state\n");
+    return;
+  }
+
+  if (!storageStateExists) {
+    console.log("⚠️  Storage state file not found - globalSetup may not have run properly");
+  }
+  if (!isCacheValid) {
+    console.log("⚠️  Auth cache invalid or expired");
+  }
+
+  console.log("↻ Performing fresh Jamf login...");
   await performLoginJamf(page, config.email, config.password);
 };
 
@@ -22,7 +56,7 @@ export const loginJamfWithInvalidCredentials = async ({
 }) => {
   await page.goto(config.baseUrl);
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
   } catch {
     // landing may already be on IdP
   }
@@ -60,7 +94,7 @@ export const loginJamfWithInvalidCredentials = async ({
 export const forgotPasswordJamf = async ({ page }: { page: Page }) => {
   await page.goto(config.baseUrl);
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
   } catch {
     /* already on login */
   }

@@ -18,6 +18,8 @@ import {
   clickJamfIdSubmit,
   waitForJamfAppAfterIdp,
 } from "./jamfUi";
+import * as path from "path";
+import * as fs from "fs";
 
 // Re-export Jamf env constant for callers that branch on auth mode
 export { JAMF_AUTH_ENV };
@@ -25,14 +27,24 @@ export { JAMF_AUTH_ENV };
 /**
  * Build auth payload from the current page (cookies + storage). Shared by standard and Jamf login.
  * Change: extracted from performLogin to avoid duplicating capture logic for Jamf flow.
+ * JAMF Change: Capture ALL cookies, not just Auth0 ones - JAMF session might use different cookies
  */
 async function buildAuthCacheData(page: Page): Promise<AuthCacheData> {
   const cookies = await page.context().cookies();
-  const authCookies = cookies.filter((c) =>
-    ["did", "did_compat", "auth0", "_legacy_auth0"].some((name) =>
-      c.name.includes(name)
-    )
-  );
+  
+  // For JAMF: capture ALL cookies since we don't know which ones are needed for session
+  // Filter out common non-essential cookies (tracking, analytics, etc.)
+  const authCookies = cookies.filter((c) => {
+    const name = c.name.toLowerCase();
+    // Exclude tracking and analytics cookies
+    const excludedPatterns = ["_ga", "_gid", "gtm", "segment", "amplitude"];
+    const isExcluded = excludedPatterns.some(p => name.includes(p));
+    return !isExcluded;
+  });
+
+  console.log(`📍 Total cookies: ${cookies.length}, keeping: ${authCookies.length}`);
+  console.log(`📍 Cookie names: ${authCookies.map(c => c.name).join(", ")}`);
+
   const tokens = await extractTokensFromStorage(page);
   return {
     cookies: authCookies as CookieData[],
@@ -59,7 +71,7 @@ export async function performLogin(
 
   // Click Login button to go to login form
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     console.log("✓ Clicked Login button");
   } catch (error) {
     console.log("ℹ Login button not found, continuing...");
@@ -107,7 +119,7 @@ export async function performLoginJamf(
   console.log(`✓ Navigated to ${config.baseUrl}`);
 
   try {
-    await page.getByRole("button", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Log in" }).click();
     console.log("✓ Clicked Login button");
   } catch (error) {
     console.log("ℹ Login button not found, continuing...");
@@ -133,8 +145,20 @@ export async function performLoginJamf(
 
   await clickJamfIdSubmit(page, "email");
 
-  await page.waitForSelector("#password", { state: "visible", timeout: 60_000 });
-  await page.fill("#password", password);
+  // Wait for form to transition from email step to password step
+  // The email field should disappear or become hidden when the form switches
+  console.log("⏳ Waiting for form to transition to password step...");
+  await emailInput.waitFor({ state: "hidden", timeout: 30_000 }).catch(() => {
+    console.log("ℹ Email field didn't hide, continuing...");
+  });
+  await page.waitForTimeout(500); // Give form a moment to render password field
+
+  // Wait for password field with flexible selectors (may be in iframe)
+  const passwordInput = page
+    .locator('input[type="password"], input[name="password"], #password')
+    .first();
+  await passwordInput.waitFor({ state: "visible", timeout: 60_000 });
+  await passwordInput.fill(password);
   console.log("✓ Filled password");
 
   await clickJamfIdSubmit(page, "password");
@@ -143,9 +167,11 @@ export async function performLoginJamf(
   await waitForJamfAppAfterIdp(page, config.baseUrl);
   console.log("✓ Jamf login successful - back on Manager (post IdP)");
 
+  // DON'T navigate explicitly here - let setupAuth/globalSetup handle it
+  // This ensures localStorage has time to populate before we capture it
+  
   const cacheData = await buildAuthCacheData(page);
-  // Pin to jamf cache file even if TEST_ENV were wrong in a subprocess
-  saveAuthCache(cacheData, JAMF_AUTH_ENV);
+
   return cacheData;
 }
 
@@ -160,23 +186,39 @@ async function extractTokensFromStorage(page: Page): Promise<TokenData> {
       const storage = window.localStorage;
       const keys = Object.keys(storage);
 
-      // Look for common token storage keys
+      console.log("📍 localStorage keys found:", keys);
+
+      // Look for common token storage keys AND capture ALL items
       const tokenData: any = {};
 
       keys.forEach((key) => {
+        const value = storage.getItem(key);
+        // Log first 100 chars of each item for debugging
+        console.log(`  📍 ${key}: ${value ? value.substring(0, 100) : 'null'}`);
+        
         if (
           key.includes("access") ||
           key.includes("token") ||
-          key.includes("auth")
+          key.includes("auth") ||
+          key.includes("jwt") ||
+          key.includes("session")
         ) {
-          tokenData[key] = storage.getItem(key);
+          tokenData[key] = value;
         }
       });
+
+      // If no explicit token keys found, store ALL localStorage as a fallback
+      if (Object.keys(tokenData).length === 0 && keys.length > 0) {
+        console.log("⚠️  No token keys found, storing all localStorage items as fallback");
+        keys.forEach((key) => {
+          tokenData[key] = storage.getItem(key);
+        });
+      }
 
       return tokenData;
     });
 
-    console.log("ℹ Tokens found in localStorage:", Object.keys(tokensFromStorage));
+    console.log("ℹ Tokens extracted from localStorage:", Object.keys(tokensFromStorage));
 
     // Return tokens or empty structure (will be populated during login interception)
     return {
@@ -200,6 +242,7 @@ async function extractTokensFromStorage(page: Page): Promise<TokenData> {
  * Restore authentication from cache
  * Injects cached cookies and tokens into browser context
  * Change: optional authEnv loads the matching cache file (jamf vs default)
+ * Change: Restore ALL captured localStorage items, not just known token keys
  */
 export async function restoreAuthFromCache(
   context: BrowserContext,
@@ -219,26 +262,28 @@ export async function restoreAuthFromCache(
     if (cache && cache.cookies && cache.cookies.length > 0) {
       await context.addCookies(cache.cookies);
       console.log(`✓ Restored ${cache.cookies.length} cookies from cache`);
+      console.log(`  Domains: ${[...new Set(cache.cookies.map(c => c.domain))].join(", ")}`);
+      console.log(`  Names: ${cache.cookies.map(c => c.name).join(", ")}`);
     }
 
-    // Set tokens in local storage if they exist
+    // Set tokens/storage items in local storage if they exist
     const page = await context.newPage();
     await page.goto(config.baseUrl, { waitUntil: "domcontentloaded" });
 
-    if (cache && cache.tokens && cache.tokens.access_token) {
+    if (cache && cache.tokens && Object.keys(cache.tokens).length > 0) {
       // @ts-ignore - window is available in page.evaluate() browser context
       await page.evaluate((tokens) => {
-        if (tokens.access_token) {
-          // @ts-ignore
-          window.localStorage.setItem("access_token", tokens.access_token);
-        }
-        if (tokens.id_token) {
-          // @ts-ignore
-          window.localStorage.setItem("id_token", tokens.id_token);
-        }
+        console.log("Setting tokens to localStorage:", Object.keys(tokens));
+        Object.entries(tokens).forEach(([key, value]) => {
+          if (value) {
+            // @ts-ignore
+            window.localStorage.setItem(key, value);
+          }
+        });
       }, cache.tokens);
 
-      console.log("✓ Restored tokens to localStorage");
+      console.log(`✓ Restored ${Object.keys(cache.tokens).length} items to localStorage`);
+      console.log(`  Keys: ${Object.keys(cache.tokens).join(", ")}`);
     }
 
     await page.close();
@@ -268,10 +313,94 @@ export async function setupAuth(
   if (!restored) {
     const page = await context.newPage();
     try {
+      let cacheData: AuthCacheData | undefined;
+      
       if (authEnv === JAMF_AUTH_ENV) {
-        await performLoginJamf(page, email, password);
+        cacheData = await performLoginJamf(page, email, password);
+        // Save auth cache for JAMF (so next globalSetup can reuse it)
+        if (cacheData) {
+          saveAuthCache(cacheData, JAMF_AUTH_ENV);
+        }
       } else {
         await performLogin(page, email, password);
+      }
+      
+      // For JAMF: capture storage state FROM THIS PAGE before closing
+      // This ensures we get all localStorage that was set during login
+      if (authEnv === JAMF_AUTH_ENV) {
+        const storageDir = path.resolve(__dirname, "../../user/.auth");
+        if (!fs.existsSync(storageDir)) {
+          fs.mkdirSync(storageDir, { recursive: true });
+        }
+        
+        // Wait for localStorage to be populated by Auth0 SDK
+        console.log(`⏳ Waiting for localStorage to populate...`);
+        let localStoragePopulated = false;
+        for (let i = 0; i < 10; i++) {
+          // @ts-ignore - window is available in page.evaluate() browser context
+          const hasStorage = await page.evaluate(() => {
+            const keys = Object.keys(window.localStorage);
+            return keys.length > 0;
+          });
+          if (hasStorage) {
+            localStoragePopulated = true;
+            break;
+          }
+          await page.waitForTimeout(500);
+        }
+        
+        if (!localStoragePopulated) {
+          console.log(`⚠️  localStorage never populated (Auth0 tokens may be in cookies only)`);
+        } else {
+          console.log(`✓ localStorage populated`);
+        }
+        
+        const storageStateFile = path.resolve(storageDir, "user-jamf.json");
+        console.log(`↻ Capturing storage state from login page for JAMF...`);
+        
+        // Extract and manually add localStorage to storage state
+        // @ts-ignore - window is available in page.evaluate() browser context
+        const localStorageData = await page.evaluate(() => {
+          const data: Record<string, string> = {};
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key) {
+              data[key] = window.localStorage.getItem(key) || "";
+            }
+          }
+          return data;
+        });
+        
+        // Get the context storage state (cookies + what Playwright captures)
+        const storageState = await context.storageState();
+        
+        // Manually add localStorage to the origin if we found any
+        if (localStorageData && Object.keys(localStorageData).length > 0) {
+          const origin = new URL(config.baseUrl).origin;
+          
+          if (!storageState.origins) {
+            storageState.origins = [];
+          }
+          
+          // Find or create origin entry
+          let originEntry = storageState.origins.find(o => o.origin === origin);
+          if (!originEntry) {
+            originEntry = { origin, localStorage: [] };
+            storageState.origins.push(originEntry);
+          }
+          
+          // Add localStorage items
+          originEntry.localStorage = Object.entries(localStorageData).map(([name, value]) => ({
+            name,
+            value,
+          }));
+          
+          console.log(`✓ Added ${Object.keys(localStorageData).length} localStorage items to origin`);
+        }
+        
+        // Write manually to ensure all data is saved
+        fs.writeFileSync(storageStateFile, JSON.stringify(storageState, null, 2));
+        console.log(`✓ Storage state saved to ${storageStateFile}`);
       }
     } finally {
       await page.close();

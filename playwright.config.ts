@@ -20,6 +20,12 @@ const chromeUse = {
   launchOptions: { slowMo: 100 },
 };
 
+const firefoxUse = {
+  ...devices['Desktop Firefox'],
+  viewport: { width: 1280, height: 720 },
+  launchOptions: { slowMo: 50 },
+};
+
 const defaultProjects = [
   {
     name: `tests-${config.namespace}-${config.region || 'no region'}-${config.domain}`,
@@ -89,7 +95,10 @@ export default defineConfig({
   },
 
   projects: isJamfEnv
-    ? [{ name: 'chromium', use: chromeUse }]
+    ? [
+        { name: 'chromium', use: chromeUse },
+        { name: 'firefox', use: firefoxUse },
+      ]
     : defaultProjects,
 
   /* Run your local dev server before starting the tests */

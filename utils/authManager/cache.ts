@@ -113,16 +113,35 @@ export function loadAuthCache(env?: string): AuthCacheData | null {
 export function isAuthCacheValid(cache: AuthCacheData | null): boolean {
   if (!cache) return false;
 
-  // Check if access token is expired
-  if (isTokenExpired(cache.tokens.access_token)) {
-    console.log("✗ Auth cache expired (access token expired)");
-    return false;
-  }
-
-  // Check if cookies exist
   if (!cache.cookies || cache.cookies.length === 0) {
     console.log("✗ Auth cache invalid (no cookies)");
     return false;
+  }
+
+  if (cache.tokens.access_token) {
+    // JWT-based validation (normal instance)
+    if (isTokenExpired(cache.tokens.access_token)) {
+      console.log("✗ Auth cache expired (access token expired)");
+      return false;
+    }
+  } else {
+    // Cookie-based validation (Jamf — session is cookie-only, no JWT in localStorage)
+    const now = Date.now() / 1000;
+    const bufferSeconds = 5 * 60;
+    const keyAuthCookies = cache.cookies.filter(
+      (c) => c.name === "auth0" || c.name === "auth0_compat"
+    );
+    if (keyAuthCookies.length === 0) {
+      console.log("✗ Auth cache invalid (no auth0 cookies for Jamf flow)");
+      return false;
+    }
+    const allValid = keyAuthCookies.every(
+      (c) => c.expires !== undefined && c.expires > now + bufferSeconds
+    );
+    if (!allValid) {
+      console.log("✗ Auth cache expired (Jamf auth0 cookies expired)");
+      return false;
+    }
   }
 
   console.log("✓ Auth cache is valid");

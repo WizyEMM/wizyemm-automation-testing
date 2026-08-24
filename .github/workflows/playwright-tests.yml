@@ -1,25 +1,27 @@
 name: Playwright Tests
 
 on:
-  push:
-    branches:
-      - main
-      - development
-    
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
-      release_title:
-        description: 'Release title from Jira'
-        required: false
-        type: string
+      environment:
+        description: 'Select environment to test'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
 
 
 jobs:
   automation-test:
+    # Run on manual dispatch to staging
+    if: github.event.inputs.environment == 'staging'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
       - name: Checkout code
@@ -92,19 +94,32 @@ jobs:
           tests/notifications 
           tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
 
-      - name: Upload allure results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: allure-results-login
-          path: allure-results/
-          retention-days: 7
-
       - name: Generate Allure Report
         if: always()
         run: |
           npm install -g allure
-          allure generate allure-results -o allure-report
+          allure generate allure-results -o allure-report || true
+
+      - name: Compress Allure Results for Slack Reporter
+        if: always()
+        run: |
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            tar -czf allure-results.tar.gz allure-results/
+            SIZE=$(du -h allure-results.tar.gz | cut -f1)
+            echo "✅ Compressed allure-results ($SIZE)"
+            [ -f "allure-results.tar.gz" ] && echo "✓ Archive file verified" || exit 1
+          else
+            echo "⚠️ No allure-results to compress"
+            touch allure-results.tar.gz
+          fi
+
+      - name: Upload Allure Results as Artifact (Slack Reporter)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-staging-${{ github.run_id }}
+          path: allure-results.tar.gz
+          retention-days: 1
 
       - name: Authenticate to Google Cloud
         if: always()
@@ -117,13 +132,12 @@ jobs:
         if: always()
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Upload Allure Report to GCS
+      - name: Upload Allure Report to GCS (Direct)
         if: always()
         id: gcs_upload
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
-          # Get version, default to timestamp if not available
           VERSION="${{ steps.version.outputs.version }}"
           if [ -z "$VERSION" ]; then
             VERSION=$(date +%Y%m%d-%H%M%S)
@@ -131,72 +145,283 @@ jobs:
           
           echo "📊 Checking existing test runs for version: $VERSION"
           
-          # List all folders for this version and find the highest test run number
-          echo "ℹ️ Listing existing folders for version: $VERSION"
           FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/allure-reports/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
           echo "Found folders: $FOLDER_LIST"
           
-          # Extract the highest test run number
           if [ -z "$FOLDER_LIST" ]; then
             TEST_RUN=1
             echo "ℹ️ No existing runs found, starting with Tr.1"
           else
-            # Extract numbers from folder names like "v2.64.0-rc.0-Tr.1/" and find max
             HIGHEST=$(echo "$FOLDER_LIST" | sed 's/.*-Tr\.\([0-9]*\)\/.*/\1/' | sort -n | tail -1)
             TEST_RUN=$((HIGHEST + 1))
             echo "ℹ️ Found highest run number: $HIGHEST, next run will be: Tr.$TEST_RUN"
           fi
           
-          # Set report path with version and test run counter
           REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
-          GCS_OBJECT="gs://emm-test-artifacts/$REPORT_PATH/index.html"
           
           echo "📤 Uploading Allure report to GCS..."
-          echo "Version: v${VERSION}"
-          echo "Test Run: Tr.${TEST_RUN}"
-          echo "Folder: $REPORT_PATH"
           gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
           
           echo "✅ Report uploaded successfully"
-          echo "📋 Report location: gs://emm-test-artifacts/$REPORT_PATH/" >> $GITHUB_STEP_SUMMARY
           
-          echo "🔐 Generating signed URL (valid for 7 days)..."
-          if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-            echo "❌ Service account credentials file not found at: $GOOGLE_APPLICATION_CREDENTIALS"
-            exit 1
-          fi
-          
-          # Install google-cloud-storage package
           npm install @google-cloud/storage -q
           
-          # Generate signed URL using Node.js script
           SIGNED_URL=$(node scripts/generate-signed-url.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" "$REPORT_PATH/index.html" 7)
           
           if [ -z "$SIGNED_URL" ] || [[ ! "$SIGNED_URL" =~ ^https:// ]]; then
             echo "❌ Failed to generate signed URL"
-            echo "Output: $SIGNED_URL"
             exit 1
           fi
           
           echo "✅ Signed URL generated successfully"
-          echo "🔗 Signed URL: ${SIGNED_URL:0:80}..."
-          
-          # Export as step outputs for next steps
           echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
-          echo "version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+          echo "report_version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+
+  automation-test-prod:
+    # Run on manual dispatch to production
+    if: github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Clean previous results
+        run: |
+          rm -rf allure-results test-results
+          mkdir -p allure-results test-results
+
+      - name: Fetch Current Version from API
+        id: version
+        env:
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          REGION: ${{ secrets.PROD_REGION }}
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+        continue-on-error: true
+        run: |
+          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
+          echo "📡 Fetching version from: $FULL_URL"
+          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
+          echo "📦 API Response: $RESPONSE"
           
-          echo "📤 Exported outputs:"
-          echo "  - signed_url: ${SIGNED_URL:0:80}..."
-          echo "  - version: v${VERSION}-Tr.${TEST_RUN}"
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
+          
+          if [ -z "$VERSION" ]; then
+            echo "⚠️ Failed to fetch version from API, will proceed without version"
+            echo "version=" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Successfully fetched version: $VERSION"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run login tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
+
+      - name: Run all tests
+        if: always()
+        env:
+          DOMAIN: ${{ secrets.PROD_DOMAIN }}
+          EMAIL: ${{ secrets.PROD_EMAIL }}
+          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
+          PASSWORD: ${{ secrets.PROD_PASSWORD }}
+          REGION: ${{ secrets.PROD_REGION }}
+        run: npx playwright test 
+          tests/profile 
+          tests/application 
+          tests/configuration 
+          tests/dashboard 
+          tests/fleet 
+          tests/notifications 
+          tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+
+      - name: Generate Allure Report
+        if: always()
+        run: |
+          npm install -g allure
+          allure generate allure-results -o allure-report || true
+
+      - name: Compress Allure Results for Slack Reporter
+        if: always()
+        run: |
+          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+            tar -czf allure-results.tar.gz allure-results/
+            SIZE=$(du -h allure-results.tar.gz | cut -f1)
+            echo "✅ Compressed allure-results ($SIZE)"
+            [ -f "allure-results.tar.gz" ] && echo "✓ Archive file verified" || exit 1
+          else
+            echo "⚠️ No allure-results to compress"
+            touch allure-results.tar.gz
+          fi
+
+      - name: Upload Allure Results as Artifact (Slack Reporter)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-production-${{ github.run_id }}
+          path: allure-results.tar.gz
+          retention-days: 1
+
+      - name: Extract Test Counts from Allure Report
+        if: always()
+        id: test_counts
+        run: |
+          SUMMARY_FILE="allure-report/data/widgets/summary.json"
+          if [ -f "$SUMMARY_FILE" ]; then
+            PASSED=$(jq '.statistic.passed // 0' "$SUMMARY_FILE")
+            FAILED=$(jq '.statistic.failed // 0' "$SUMMARY_FILE")
+            BROKEN=$(jq '.statistic.broken // 0' "$SUMMARY_FILE")
+            SKIPPED=$(jq '.statistic.skipped // 0' "$SUMMARY_FILE")
+            TOTAL=$(jq '.statistic.total // 0' "$SUMMARY_FILE")
+            
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+            echo "broken=$BROKEN" >> $GITHUB_OUTPUT
+            echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "total=$TOTAL" >> $GITHUB_OUTPUT
+            
+            echo "✅ Test counts extracted: Passed=$PASSED, Failed=$FAILED, Broken=$BROKEN, Skipped=$SKIPPED, Total=$TOTAL"
+          else
+            echo "⚠️ summary.json not found, setting counts to 0"
+            echo "passed=0" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "broken=0" >> $GITHUB_OUTPUT
+            echo "skipped=0" >> $GITHUB_OUTPUT
+            echo "total=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        if: always()
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        if: always()
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload Allure Report to GCS (Direct)
+        if: always()
+        id: gcs_upload
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          echo "📊 Checking existing test runs for version: $VERSION"
+          
+          FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/allure-reports/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
+          echo "Found folders: $FOLDER_LIST"
+          
+          if [ -z "$FOLDER_LIST" ]; then
+            TEST_RUN=1
+            echo "ℹ️ No existing runs found, starting with Tr.1"
+          else
+            HIGHEST=$(echo "$FOLDER_LIST" | sed 's/.*-Tr\.\([0-9]*\)\/.*/\1/' | sort -n | tail -1)
+            TEST_RUN=$((HIGHEST + 1))
+            echo "ℹ️ Found highest run number: $HIGHEST, next run will be: Tr.$TEST_RUN"
+          fi
+          
+          REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
+          
+          echo "📤 Uploading Allure report to GCS..."
+          gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
+          
+          echo "✅ Report uploaded successfully"
+          
+          npm install @google-cloud/storage -q
+          
+          SIGNED_URL=$(node scripts/generate-signed-url.js "$GOOGLE_APPLICATION_CREDENTIALS" "emm-test-artifacts" "$REPORT_PATH/index.html" 7)
+          
+          if [ -z "$SIGNED_URL" ] || [[ ! "$SIGNED_URL" =~ ^https:// ]]; then
+            echo "❌ Failed to generate signed URL"
+            exit 1
+          fi
+          
+          echo "✅ Signed URL generated successfully"
+          echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
+          echo "report_version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+
+  upload-report:
+    # Send Slack notification with report URL from test job outputs
+    if: always()
+    needs: [automation-test, automation-test-prod]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Checking artifacts directory structure:"
+          ls -la artifacts/ || echo "❌ artifacts directory not found"
+          find artifacts -type f || echo "❌ No files found in artifacts"
+          
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            echo "📊 Archive size: $(du -h "$ARCHIVE")"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+            echo "📁 Checking extracted directory:"
+            ls -la allure-results/ | head -20
+          else
+            echo "⚠️ No allure-results artifact found"
+            echo "📂 Contents of artifacts directory:"
+            find artifacts -type f -o -type d
+          fi
 
       - name: Send Test Report to Slack
         if: always()
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          RELEASE_TITLE: ${{ steps.version.outputs.version || github.event.inputs.release_title }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
-          ALLURE_REPORT_URL: ${{ steps.gcs_upload.outputs.signed_url }}
-          ALLURE_VERSION: ${{ steps.gcs_upload.outputs.version }}
+          ALLURE_REPORT_URL: ${{ needs.automation-test.outputs.signed_url || needs.automation-test-prod.outputs.signed_url }}
+          ALLURE_VERSION: ${{ needs.automation-test.outputs.report_version || needs.automation-test-prod.outputs.report_version }}
         run: |
           echo "🔍 Environment variables check:"
           echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."

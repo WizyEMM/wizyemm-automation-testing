@@ -2,12 +2,14 @@ import { defineConfig, devices } from '@playwright/test';
 import config from './utils/env';
 
 /**
- * Standalone config for login and language tests
+ * Config for JAMF login tests (standalone login testing)
  * This does NOT use globalSetup - each test handles its own login
+ * Mirrors playwright.login.config.ts pattern for Normal instance
  */
+
 export default defineConfig({
   testDir: './tests/login',
-  testMatch: ['**/login.spec.ts', '**/language.spec.ts'],
+  testMatch: ['**/login.jamf.spec.ts'],
   /* Run tests in files in parallel */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -28,7 +30,6 @@ export default defineConfig({
     ['html'],
     ['allure-playwright']
   ],
-  
   /* Shared settings - NO globalSetup, NO storageState */
   use: {
     video: "on",
@@ -41,7 +42,7 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: `page-login-test`,
+      name: `jamf-login-test`,
       use: { 
         viewport: { width: 1280, height: 720 },
         launchOptions:{

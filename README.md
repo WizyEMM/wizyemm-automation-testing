@@ -1,51 +1,218 @@
-# WizyEMM Automation Testing #
+# WizyEMM Automation Testing
 
-This project uses [Playwright](https://playwright.dev/) to automate end-to-end tests and other repetitive test cases. It helps ensure application reliability, improve test coverage, and speed up the development workflow through consistent and efficient testing
+End-to-end UI automation for the WizyEMM console, built with [Playwright](https://playwright.dev/) and TypeScript. It runs real browser tests against live environments to catch regressions before customers do.
 
-## Setup Instructions ##
+**Stack:** Playwright (`@playwright/test`) · TypeScript · Node.js 18 · Allure reporting · GitHub Actions CI/CD
 
-**Pre-requisite**
-* Source Code Editor
-* Node JS
-* Admin emails to be added on .env should have access to the namespace
+---
 
-1. **Clone the repository**
-* wizyemm-automation-testing 
+## Prerequisites
 
-2. **Install Dependencies**
+Before you start, make sure you have:
 
-## How to run tests ##
-1. **Create .env files**
-* Modify the `.env{.dev/.production/.staging}`
-* attributes in the env file
-`NAMESPACE={namespace of customer}`
-`REGION={region of namespace}`
-`DOMAIN={domain of wizyemm}`
-`EMAIL={email to be used as credentials}`
-`PASSWORD={password of the email}`
+| Tool | Version | Verify |
+|---|---|---|
+| Node.js (LTS) | 18 or higher | `node -v` |
+| npm | 9 or higher | `npm -v` |
+| Git | any recent | `git --version` |
+| VS Code (recommended) | latest | — |
 
-2. **Running the test**
-* Run on terminal using the following commands:
-* `npm run test:staging {file}` add the filename if you want to run specific tests
-* `npm run test:prod {file}` add the filename if you want to run specific tests
-* `npm run test:dev {file}` add the filename if you want to run specific tests
+You also need an **admin account** whose email has access to the namespace you intend to test. Reach out to the repo owner / QA lead if you don't have one.
 
+---
 
-### Contribution guidelines ###
+## Setup — Step by Step
 
-#### Writing tests ####
-* Use Playwright and follow the `tests/` folder structure
+### 1. Clone the repository
 
-#### Code review ####
-* All pull requests must be reviewed by at least one core team member before merging
+```bash
+git clone https://github.com/WizyEMM/wizyemm-automation-testing.git
+cd wizyemm-automation-testing
+```
 
-#### Other guidelines ####
-* Coding style or formatting rules (e.g., use Prettier, proper indentation)
-* Branch naming conventions
-* Commit message format (e.g., Conventional Commits)
-* Any required documentation or comments in the code
+### 2. Install dependencies
 
-### Who do I talk to? ###
+```bash
+npm install
+```
 
-* Repo Owner or Admins
-* For general questions, contact the QA team on Slack (#wizyemm-qa)
+(Use `npm ci` instead if you want a clean, lockfile-exact install.)
+
+### 3. Install the Playwright browsers
+
+Downloads the browser binaries Playwright drives. Run once per machine.
+
+```bash
+npx playwright install
+```
+
+### 4. Create your environment (`.env`) files
+
+**This is the part people miss.** The framework does **not** read a single `.env`. `utils/env.ts` loads a **different file per environment**, chosen by the `TEST_ENV` variable that each npm script sets for you:
+
+```ts
+// utils/env.ts
+const envFileName = process.env.TEST_ENV ? `.env.${process.env.TEST_ENV}` : ".env";
+```
+
+So the npm script you run decides which file is loaded:
+
+| Command | Sets `TEST_ENV` | Loads file |
+|---|---|---|
+| `npm run test:staging` | `staging` | `.env.staging` |
+| `npm run test:prod` | `production` | `.env.production` |
+| `npm run test:dev` | `development` | `.env.development` |
+| `npm run test:jamf` | `jamf` | `.env.jamf` |
+| `npm test` | *(unset)* | `.env` (fallback) |
+
+Create the file(s) for the environment(s) you actually test against, in the **project root**. Each file has exactly these five keys:
+
+```dotenv
+NAMESPACE=<namespace of the instance>
+REGION=<region of the instance>
+DOMAIN=<domain of the instance>
+EMAIL=<admin email used as credentials>
+PASSWORD=<password for that email>
+```
+
+`env.ts` composes the base URL the tests hit as:
+
+```
+https://{NAMESPACE}.{REGION}.{DOMAIN}
+```
+
+**Example — `.env.staging`:**
+
+```dotenv
+NAMESPACE=teama-automation
+REGION=staging-us
+DOMAIN=wizyemm.app
+EMAIL=automation@example.com
+PASSWORD=your-password
+```
+
+...produces `https://teama-automation.staging-us.wizyemm.app`.
+
+**Example — `.env.jamf`** (note the JAMF domain differs):
+
+```dotenv
+NAMESPACE=qa-test-jamf-automation
+REGION=stage
+DOMAIN=manager-for-android.jamflabs.com
+EMAIL=<jamf admin email>
+PASSWORD=<jamf admin password>
+```
+
+> ⚠️ **Never commit `.env` files.** They hold real credentials and are already excluded via `.gitignore` (`.env*`). If you accidentally stage one, unstage it before committing. The admin account must have access to the target namespace or the tests will fail at login.
+
+---
+
+## Running Tests
+
+Tests run **headed** (browser visible) by default via the npm scripts, on **Chromium** locally.
+
+```bash
+npm run test:staging      # run the full suite against staging
+npm run test:prod         # against production
+npm run test:dev          # against development
+npm run test:jamf         # against the JAMF instance
+```
+
+### Run a specific file or folder
+
+Append `--` then the path (the `--` passes the argument through to Playwright):
+
+```bash
+npm run test:staging -- tests/login/login.spec.ts
+npm run test:staging -- tests/fleet
+```
+
+### Login & language tests (standalone config)
+
+Login and language tests use their own config that does **not** use the cached auth session — each test logs in fresh:
+
+```bash
+# Normal instance
+npx playwright test --config=playwright.login.config.ts
+
+# JAMF instance
+npx cross-env TEST_ENV=jamf npx playwright test --config=playwright.login.jamf.config.ts
+```
+
+### Headless mode
+
+The npm scripts set `HEADLESS=false`. To run without a visible browser (e.g. faster, or CI-like):
+
+```bash
+npx playwright test --project=chromium
+```
+
+---
+
+## Authentication (how login is handled)
+
+You do **not** log in manually in feature tests. A global setup (`utils/authManager/globalSetup.ts`) runs before the suite:
+
+1. Checks `Cookies/` for a valid cached session.
+2. If valid → restores it (no browser login).
+3. If missing/expired → performs a real browser login using your `.env` credentials and caches it.
+4. Saves the browser storage state to `user/.auth/` so every test starts already authenticated.
+
+The cache and storage-state files (`Cookies/auth-cache*.json`, `user/.auth/user*.json`) are **gitignored** and managed automatically — don't edit them by hand. Delete them if you need to force a fresh login.
+
+---
+
+## Reports
+
+### Playwright HTML report
+
+```bash
+npx playwright show-report
+```
+
+### Allure report (richer, with history/trends)
+
+```bash
+npm run allure:report     # builds history + generates + opens the report
+npm run clean:allure      # clears allure-results before a fresh run (Windows)
+```
+
+Generated report folders (`allure-results/`, `allure-report/`, `playwright-report/`, `test-results/`) are gitignored — never commit them.
+
+---
+
+## Project Structure
+
+```
+tests/                 End-to-end specs, organized by feature
+  _base/               Shared test fixture (JAMF session handling)
+  login/               Login + language tests (standalone configs)
+  dashboard/ fleet/ enrollment/ application/ configuration/
+  profile/ settings/ notifications/ adminaccounts/
+utils/
+  env.ts               Loads the right .env and composes baseURL
+  helpers.ts           Shared action helpers (clicks, waits, search, etc.)
+  authManager/         Login, session caching, JAMF auth flow, globalSetup
+scripts/               Allure history, signed URLs, Slack + WizyReport reporting
+.github/               CI/CD workflows and composite actions
+playwright.config.ts             Main config (feature tests, globalSetup auth)
+playwright.login.config.ts       Standalone login/language tests
+playwright.login.jamf.config.ts  JAMF login tests
+```
+
+---
+
+## Contribution Guidelines
+
+- **Writing tests:** follow the Page Object Model 3-file pattern (`*.page.ts`, `*.ts`, `*.spec.ts`) and the existing `tests/` structure.
+- **Branches:** branch off `development`, name them `<type>/<short-description>` (see the Branch Naming Guide).
+- **Commits:** use Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:` …) — see the Commit Message Guide.
+- **Pull requests:** fill out the PR template completely and link the related ticket. At least one core-team approval is required; no direct pushes to `main` or `development`.
+- See the team's **Do's and Don'ts** and **Automation Pipeline** docs for full detail.
+
+---
+
+## Who Do I Talk To?
+
+- Repo owner / admins for access and reviews.
+- QA team on Slack (**#wizyemm-qa**) for general questions.

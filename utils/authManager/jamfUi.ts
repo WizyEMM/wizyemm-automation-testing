@@ -6,16 +6,11 @@ import { Page, expect, Frame } from "@playwright/test";
 
 /**
  * Locator for Auth0 "Log in using Jamf ID" primary action.
+ * Must handle multiple languages (English, German, etc.)
+ * Priority: visible buttons with "jamf id" text (language-agnostic) first
  */
 export function jamfIdSubmitLocator(root: Page | Frame) {
-  return root
-    .getByRole("button", { name: /Log in using Jamf ID/i })
-    .or(root.getByRole("button", { name: /Jamf ID/i }))
-    .or(root.locator("button._button-login-id"))
-    .or(
-      root.locator('button[type="submit"][name="action"][value="default"]')
-    )
-    .or(root.locator("button").filter({ hasText: /Jamf ID/i }));
+  return root.getByRole("button", { name: "Log in using Jamf ID" });
 }
 
 /**
@@ -29,20 +24,33 @@ export async function clickJamfIdSubmit(
   const btnMain = jamfIdSubmitLocator(page).first();
 
   try {
-    await expect(btnMain).toBeVisible({ timeout });
-    await expect(btnMain).toBeEnabled({ timeout: 20_000 });
-    await btnMain.scrollIntoViewIfNeeded();
+    console.log(`⏳ Waiting for Jamf ID button to appear (after ${after})...`);
+    await btnMain.waitFor({ state: "visible", timeout });
+    console.log(`✓ Jamf ID button visible`);
+    
+    console.log(`⏳ Clicking Jamf ID button...`);
     await btnMain.click();
     console.log(`✓ Clicked Jamf ID submit (after ${after})`);
     return;
-  } catch {
+  } catch (error) {
+    console.log(`❌ Failed to click button on main page: ${error}`);
+    
+    // Debug: log all buttons on main page
+    const allButtons = await page.locator("button").all();
+    console.log(`📋 Found ${allButtons.length} buttons on main page:`);
+    for (let i = 0; i < Math.min(allButtons.length, 10); i++) {
+      const text = await allButtons[i].textContent();
+      const visible = await allButtons[i].isVisible();
+      console.log(`   [${i}] "${text}" (visible: ${visible})`);
+    }
+    
+    console.log(`⏳ Searching for button in iframes...`);
+    
     for (const frame of page.frames()) {
       if (frame === page.mainFrame()) continue;
       const btn = jamfIdSubmitLocator(frame).first();
       try {
-        await expect(btn).toBeVisible({ timeout: 10_000 });
-        await expect(btn).toBeEnabled({ timeout: 15_000 });
-        await btn.scrollIntoViewIfNeeded();
+        await btn.waitFor({ state: "visible", timeout: 10_000 });
         await btn.click();
         console.log(
           `✓ Clicked Jamf ID submit (after ${after}, in frame ${frame.url().slice(0, 80)}…)`

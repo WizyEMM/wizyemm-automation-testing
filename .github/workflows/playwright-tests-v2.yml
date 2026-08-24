@@ -1,0 +1,213 @@
+name: Playwright Tests V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance_type:
+        description: 'Select instance type'
+        required: true
+        type: choice
+        options:
+          - 'Normal Instance'
+          - 'JAMF Instance'
+        default: 'Normal Instance'
+      environment:
+        description: 'Environment (production = Normal prod; Prod-US / Prod-EU = JAMF prod)'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+          - Prod-US
+          - Prod-EU
+        default: staging
+      test_scope:
+        description: 'Select which tests to run'
+        required: true
+        type: choice
+        options:
+          - 'Login Tests Only'
+          - 'All Tests'
+          - 'Login + All Tests'
+        default: 'All Tests'
+
+jobs:
+  # ============= RUN TESTS (single job, secrets resolved by instance + environment) =============
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.run.outputs.version }}
+      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
+      report_version: ${{ steps.gcs_upload.outputs.report_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-and-deps
+
+      - name: Run tests
+        id: run
+        uses: ./.github/actions/run-tests
+        with:
+          test_scope: ${{ github.event.inputs.test_scope }}
+          login_config: ${{ github.event.inputs.instance_type == 'JAMF Instance' && 'playwright.login.jamf.config.ts' || 'playwright.login.config.ts' }}
+          test_env: ${{ github.event.inputs.instance_type == 'JAMF Instance' && 'jamf' || '' }}
+          domain: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_DOMAIN
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_DOMAIN
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_DOMAIN )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_DOMAIN
+                || github.event.inputs.environment == 'staging' && secrets.DOMAIN ) }}
+          email: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_EMAIL
+                || secrets.JAMF_PROD_EMAIL )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_EMAIL
+                || github.event.inputs.environment == 'staging' && secrets.EMAIL ) }}
+          namespace: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_NAMESPACE
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_NAMESPACE
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_NAMESPACE )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_NAMESPACE
+                || github.event.inputs.environment == 'staging' && secrets.NAMESPACE ) }}
+          password: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_PASSWORD
+                || secrets.JAMF_PROD_PASSWORD )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_PASSWORD
+                || github.event.inputs.environment == 'staging' && secrets.PASSWORD ) }}
+          region: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_REGION
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_REGION
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_REGION )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_REGION
+                || github.event.inputs.environment == 'staging' && secrets.REGION ) }}
+
+      - uses: ./.github/actions/generate-report
+        if: always()
+        with:
+          instance_type: ${{ github.event.inputs.instance_type }}
+          environment: ${{ github.event.inputs.environment }}
+
+      - uses: ./.github/actions/gcs-upload
+        if: always()
+        id: gcs_upload
+        with:
+          version: ${{ steps.run.outputs.version }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # ============= INGEST TO WIZY REPORT =============
+  ingest-to-wizy-report:
+    if: always()
+    needs: [test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Extracting Allure results..."
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+          else
+            echo "⚠️ No allure-results artifact found"
+            mkdir -p allure-results
+          fi
+
+      - name: Ingest Test Results to WizyReport
+        if: always()
+        env:
+          WIZY_REPORT_ENDPOINT: ${{ secrets.WIZY_REPORT_ENDPOINT }}
+          WIZY_REPORT_API_KEY: ${{ secrets.WIZY_REPORT_API_KEY }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          EXECUTION_START_TIME: ${{ github.run_started_at }}
+          GCS_REPORT_VERSION: ${{ needs.test.outputs.report_version }}
+          APP_VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          echo "🚀 Starting WizyReport ingestion..."
+          node scripts/wizy-report/ingestor.js
+        continue-on-error: true
+
+  # ============= UPLOAD REPORT TO SLACK =============
+  upload-report:
+    if: always()
+    needs: [test, ingest-to-wizy-report]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
+        run: |
+          echo "📋 Checking artifacts directory structure:"
+          ls -la artifacts/ || echo "❌ artifacts directory not found"
+          find artifacts -type f || echo "❌ No files found in artifacts"
+
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            echo "📊 Archive size: $(du -h "$ARCHIVE")"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
+            echo "📁 Checking extracted directory:"
+            ls -la allure-results/ | head -20
+          else
+            echo "⚠️ No allure-results artifact found"
+            echo "📂 Contents of artifacts directory:"
+            find artifacts -type f -o -type d
+          fi
+
+      - name: Send Test Report to Slack
+        if: always()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          ALLURE_REPORT_URL: ${{ needs.test.outputs.signed_url }}
+          ALLURE_VERSION: ${{ needs.test.outputs.report_version }}
+        run: |
+          echo "🔍 Environment variables check:"
+          echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
+          echo "  - ALLURE_VERSION: $ALLURE_VERSION"
+          echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
+
+          npm install node-fetch
+          node scripts/slack-reporter.js
