@@ -45,7 +45,7 @@ export const languageTestData = {
     },
     {
       fromLanguage: "English",
-      toLanguageMenuItem: "中文 - Chinese",
+      toLanguageMenuItem: "中文 - Traditional Chinese",
       expectedLanguage: "中文",
       isOptional: false, // Reverted in latest release
     }

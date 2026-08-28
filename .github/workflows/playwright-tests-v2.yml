@@ -12,12 +12,14 @@ on:
           - 'JAMF Instance'
         default: 'Normal Instance'
       environment:
-        description: 'Select environment'
+        description: 'Environment (production = Normal prod; Prod-US / Prod-EU = JAMF prod)'
         required: true
         type: choice
         options:
           - staging
           - production
+          - Prod-US
+          - Prod-EU
         default: staging
       test_scope:
         description: 'Select which tests to run'
@@ -30,12 +32,11 @@ on:
         default: 'All Tests'
 
 jobs:
-  # ============= NORMAL INSTANCE - STAGING =============
-  test-normal-staging:
-    if: github.event.inputs.instance_type == 'Normal Instance' && github.event.inputs.environment == 'staging'
+  # ============= RUN TESTS (single job, secrets resolved by instance + environment) =============
+  test:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.run.outputs.version }}
       signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
       report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
@@ -44,276 +45,114 @@ jobs:
 
       - uses: ./.github/actions/setup-and-deps
 
-      - name: Fetch Current Version from API
-        id: version
-        env:
-          NAMESPACE: ${{ secrets.NAMESPACE }}
-          REGION: ${{ secrets.REGION }}
-          DOMAIN: ${{ secrets.DOMAIN }}
-        continue-on-error: true
-        run: |
-          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
-          echo "📡 Fetching version from: $FULL_URL"
-          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
-          echo "📦 API Response: $RESPONSE"
-          
-          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
-          
-          if [ -z "$VERSION" ]; then
-            echo "⚠️ Failed to fetch version from API, will proceed without version"
-            echo "version=" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Successfully fetched version: $VERSION"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run login tests
-        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.DOMAIN }}
-          EMAIL: ${{ secrets.EMAIL }}
-          NAMESPACE: ${{ secrets.NAMESPACE }}
-          PASSWORD: ${{ secrets.PASSWORD }}
-          REGION: ${{ secrets.REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
-
-      - name: Run all tests
-        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.DOMAIN }}
-          EMAIL: ${{ secrets.EMAIL }}
-          NAMESPACE: ${{ secrets.NAMESPACE }}
-          PASSWORD: ${{ secrets.PASSWORD }}
-          REGION: ${{ secrets.REGION }}
-        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
+      - name: Run tests
+        id: run
+        uses: ./.github/actions/run-tests
+        with:
+          test_scope: ${{ github.event.inputs.test_scope }}
+          login_config: ${{ github.event.inputs.instance_type == 'JAMF Instance' && 'playwright.login.jamf.config.ts' || 'playwright.login.config.ts' }}
+          test_env: ${{ github.event.inputs.instance_type == 'JAMF Instance' && 'jamf' || '' }}
+          domain: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_DOMAIN
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_DOMAIN
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_DOMAIN )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_DOMAIN
+                || github.event.inputs.environment == 'staging' && secrets.DOMAIN ) }}
+          email: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_EMAIL
+                || secrets.JAMF_PROD_EMAIL )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_EMAIL
+                || github.event.inputs.environment == 'staging' && secrets.EMAIL ) }}
+          namespace: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_NAMESPACE
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_NAMESPACE
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_NAMESPACE )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_NAMESPACE
+                || github.event.inputs.environment == 'staging' && secrets.NAMESPACE ) }}
+          password: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'staging' && secrets.JAMF_PASSWORD
+                || secrets.JAMF_PROD_PASSWORD )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_PASSWORD
+                || github.event.inputs.environment == 'staging' && secrets.PASSWORD ) }}
+          region: >-
+            ${{ github.event.inputs.instance_type == 'JAMF Instance'
+              && ( github.event.inputs.environment == 'Prod-US' && secrets.JAMF_PROD_US_REGION
+                || github.event.inputs.environment == 'Prod-EU' && secrets.JAMF_PROD_EU_REGION
+                || github.event.inputs.environment == 'staging' && secrets.JAMF_REGION )
+              || ( github.event.inputs.environment == 'production' && secrets.PROD_REGION
+                || github.event.inputs.environment == 'staging' && secrets.REGION ) }}
 
       - uses: ./.github/actions/generate-report
         if: always()
         with:
-          instance_type: 'Normal Instance'
-          environment: 'staging'
+          instance_type: ${{ github.event.inputs.instance_type }}
+          environment: ${{ github.event.inputs.environment }}
 
       - uses: ./.github/actions/gcs-upload
         if: always()
         id: gcs_upload
         with:
-          version: ${{ steps.version.outputs.version }}
+          version: ${{ steps.run.outputs.version }}
           gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
 
-  # ============= NORMAL INSTANCE - PRODUCTION =============
-  test-normal-production:
-    if: github.event.inputs.instance_type == 'Normal Instance' && github.event.inputs.environment == 'production'
+  # ============= INGEST TO WIZY REPORT =============
+  ingest-to-wizy-report:
+    if: always()
+    needs: [test]
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
-      report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: ./.github/actions/setup-and-deps
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-      - name: Fetch Current Version from API
-        id: version
-        env:
-          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
-          REGION: ${{ secrets.PROD_REGION }}
-          DOMAIN: ${{ secrets.PROD_DOMAIN }}
-        continue-on-error: true
+      - name: Download Allure Results Artifact
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: allure-results-*-${{ github.run_id }}
+
+      - name: Extract Allure Results
+        if: always()
         run: |
-          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
-          echo "📡 Fetching version from: $FULL_URL"
-          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
-          echo "📦 API Response: $RESPONSE"
-          
-          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
-          
-          if [ -z "$VERSION" ]; then
-            echo "⚠️ Failed to fetch version from API, will proceed without version"
-            echo "version=" >> $GITHUB_OUTPUT
+          echo "📋 Extracting Allure results..."
+          if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
+            ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
+            echo "📦 Found artifact: $ARCHIVE"
+            tar -xzf "$ARCHIVE" -C .
+            echo "✅ Extracted allure-results"
           else
-            echo "✅ Successfully fetched version: $VERSION"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "⚠️ No allure-results artifact found"
+            mkdir -p allure-results
           fi
 
-      - name: Run login tests
-        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.PROD_DOMAIN }}
-          EMAIL: ${{ secrets.PROD_EMAIL }}
-          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
-          PASSWORD: ${{ secrets.PROD_PASSWORD }}
-          REGION: ${{ secrets.PROD_REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
-
-      - name: Run all tests
-        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.PROD_DOMAIN }}
-          EMAIL: ${{ secrets.PROD_EMAIL }}
-          NAMESPACE: ${{ secrets.PROD_NAMESPACE }}
-          PASSWORD: ${{ secrets.PROD_PASSWORD }}
-          REGION: ${{ secrets.PROD_REGION }}
-        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
-
-      - uses: ./.github/actions/generate-report
+      - name: Ingest Test Results to WizyReport
         if: always()
-        with:
-          instance_type: 'Normal Instance'
-          environment: 'production'
-
-      - uses: ./.github/actions/gcs-upload
-        if: always()
-        id: gcs_upload
-        with:
-          version: ${{ steps.version.outputs.version }}
-          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
-
-  # ============= JAMF INSTANCE - STAGING =============
-  test-jamf-staging:
-    if: github.event.inputs.instance_type == 'JAMF Instance' && github.event.inputs.environment == 'staging'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
-      report_version: ${{ steps.gcs_upload.outputs.report_version }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup-and-deps
-
-      - name: Fetch Current Version from API
-        id: version
         env:
-          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
-          REGION: ${{ secrets.JAMF_REGION }}
-          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
-        continue-on-error: true
+          WIZY_REPORT_ENDPOINT: ${{ secrets.WIZY_REPORT_ENDPOINT }}
+          WIZY_REPORT_API_KEY: ${{ secrets.WIZY_REPORT_API_KEY }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          EXECUTION_START_TIME: ${{ github.run_started_at }}
+          GCS_REPORT_VERSION: ${{ needs.test.outputs.report_version }}
+          APP_VERSION: ${{ needs.test.outputs.version }}
         run: |
-          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
-          echo "📡 Fetching version from: $FULL_URL"
-          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
-          echo "📦 API Response: $RESPONSE"
-          
-          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
-          
-          if [ -z "$VERSION" ]; then
-            echo "⚠️ Failed to fetch version from API, will proceed without version"
-            echo "version=" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Successfully fetched version: $VERSION"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run login tests
-        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
-          EMAIL: ${{ secrets.JAMF_EMAIL }}
-          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
-          PASSWORD: ${{ secrets.JAMF_PASSWORD }}
-          REGION: ${{ secrets.JAMF_REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
-
-      - name: Run all tests
-        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.JAMF_DOMAIN }}
-          EMAIL: ${{ secrets.JAMF_EMAIL }}
-          NAMESPACE: ${{ secrets.JAMF_NAMESPACE }}
-          PASSWORD: ${{ secrets.JAMF_PASSWORD }}
-          REGION: ${{ secrets.JAMF_REGION }}
-        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
-
-      - uses: ./.github/actions/generate-report
-        if: always()
-        with:
-          instance_type: 'JAMF Instance'
-          environment: 'staging'
-
-      - uses: ./.github/actions/gcs-upload
-        if: always()
-        id: gcs_upload
-        with:
-          version: ${{ steps.version.outputs.version }}
-          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
-
-  # ============= JAMF INSTANCE - PRODUCTION =============
-  test-jamf-production:
-    if: github.event.inputs.instance_type == 'JAMF Instance' && github.event.inputs.environment == 'production'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
-      report_version: ${{ steps.gcs_upload.outputs.report_version }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup-and-deps
-
-      - name: Fetch Current Version from API
-        id: version
-        env:
-          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
-          REGION: ${{ secrets.JAMF_PROD_REGION }}
-          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
+          echo "🚀 Starting WizyReport ingestion..."
+          node scripts/wizy-report/ingestor.js
         continue-on-error: true
-        run: |
-          FULL_URL="https://${NAMESPACE}.${REGION}.${DOMAIN}/api/v1/public/version"
-          echo "📡 Fetching version from: $FULL_URL"
-          RESPONSE=$(curl -s --max-time 10 "$FULL_URL")
-          echo "📦 API Response: $RESPONSE"
-          
-          VERSION=$(echo "$RESPONSE" | jq -r '.version // ""' 2>/dev/null || echo "")
-          
-          if [ -z "$VERSION" ]; then
-            echo "⚠️ Failed to fetch version from API, will proceed without version"
-            echo "version=" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Successfully fetched version: $VERSION"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run login tests
-        if: github.event.inputs.test_scope == 'Login Tests Only' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
-          EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
-          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
-          PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
-          REGION: ${{ secrets.JAMF_PROD_REGION }}
-        run: npx playwright test --config=playwright.login.config.ts --reporter=line,allure-playwright
-
-      - name: Run all tests
-        if: github.event.inputs.test_scope == 'All Tests' || github.event.inputs.test_scope == 'Login + All Tests'
-        env:
-          DOMAIN: ${{ secrets.JAMF_PROD_DOMAIN }}
-          EMAIL: ${{ secrets.JAMF_PROD_EMAIL }}
-          NAMESPACE: ${{ secrets.JAMF_PROD_NAMESPACE }}
-          PASSWORD: ${{ secrets.JAMF_PROD_PASSWORD }}
-          REGION: ${{ secrets.JAMF_PROD_REGION }}
-        run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=chromium --reporter=line,allure-playwright
-
-      - uses: ./.github/actions/generate-report
-        if: always()
-        with:
-          instance_type: 'JAMF Instance'
-          environment: 'production'
-
-      - uses: ./.github/actions/gcs-upload
-        if: always()
-        id: gcs_upload
-        with:
-          version: ${{ steps.version.outputs.version }}
-          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
 
   # ============= UPLOAD REPORT TO SLACK =============
   upload-report:
     if: always()
-    needs: [test-normal-staging, test-normal-production, test-jamf-staging, test-jamf-production]
+    needs: [test, ingest-to-wizy-report]
     runs-on: ubuntu-latest
 
     steps:
@@ -342,7 +181,7 @@ jobs:
           echo "📋 Checking artifacts directory structure:"
           ls -la artifacts/ || echo "❌ artifacts directory not found"
           find artifacts -type f || echo "❌ No files found in artifacts"
-          
+
           if find artifacts -name "allure-results.tar.gz" -type f | grep -q .; then
             ARCHIVE=$(find artifacts -name "allure-results.tar.gz" -type f | head -1)
             echo "📦 Found artifact: $ARCHIVE"
@@ -362,13 +201,13 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
-          ALLURE_REPORT_URL: ${{ needs.test-normal-staging.outputs.signed_url || needs.test-normal-production.outputs.signed_url || needs.test-jamf-staging.outputs.signed_url || needs.test-jamf-production.outputs.signed_url }}
-          ALLURE_VERSION: ${{ needs.test-normal-staging.outputs.report_version || needs.test-normal-production.outputs.report_version || needs.test-jamf-staging.outputs.report_version || needs.test-jamf-production.outputs.report_version }}
+          ALLURE_REPORT_URL: ${{ needs.test.outputs.signed_url }}
+          ALLURE_VERSION: ${{ needs.test.outputs.report_version }}
         run: |
           echo "🔍 Environment variables check:"
           echo "  - ALLURE_REPORT_URL: ${ALLURE_REPORT_URL:0:50}..."
           echo "  - ALLURE_VERSION: $ALLURE_VERSION"
           echo "  - SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:0:20}..."
-          
+
           npm install node-fetch
           node scripts/slack-reporter.js

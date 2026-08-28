@@ -1,0 +1,44 @@
+name: Playwright Tests V3
+
+# Single-instance runner. Pick one instance (GitHub Environment) and a test
+# scope; the reusable engine resolves everything else from that Environment.
+# Covers teams, regional prod, and Jamf — one dropdown, no ternary.
+
+on:
+  workflow_dispatch:
+    inputs:
+      instance:
+        description: 'Instance to run against'
+        required: true
+        type: choice
+        options:
+          - team-a
+          - team-b
+          - team-c
+          - prod-na
+          - prod-eu
+          - prod-apac
+          - prod-id
+          - prod-au
+          - prod-india
+          - jamf-staging
+          - jamf-prod-us
+          - jamf-prod-eu
+        default: team-a
+      test_scope:
+        description: 'Select which tests to run'
+        required: true
+        type: choice
+        options:
+          - 'Login Tests Only'
+          - 'All Tests'
+          - 'Login + All Tests'
+        default: 'All Tests'
+
+jobs:
+  run:
+    uses: ./.github/workflows/_run-instance.yml
+    with:
+      instance: ${{ github.event.inputs.instance }}
+      test_scope: ${{ github.event.inputs.test_scope }}
+    secrets: inherit

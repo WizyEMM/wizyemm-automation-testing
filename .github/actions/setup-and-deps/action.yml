@@ -15,7 +15,7 @@ runs:
       shell: bash
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
+      run: npx playwright install --with-deps chromium firefox
       shell: bash
 
     - name: Clean previous results

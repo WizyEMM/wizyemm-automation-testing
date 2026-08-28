@@ -62,11 +62,15 @@ Thumbs.db
 
 # Local notes
 notes/
+docs/
 
 allure-results/
 allure-report/
 test-results/
 playwright-report/
+
+# WizyReport local test output
+scripts/wizy-report/payload-preview.json
 
 .history
 .vscode/
@@ -78,6 +82,7 @@ playwright-report/
 # Authentication & Session Caches (SENSITIVE)
 # These are generated locally or in CI/CD and should NOT be committed
 Cookies/auth-cache.json
+Cookies/auth-cache-jamf.json
 user/.auth/user.json
 user/
 

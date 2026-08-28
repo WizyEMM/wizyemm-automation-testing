@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../_base/jamfTest";
 import config from "../../../utils/env";
 import { ProfileManagementPage } from "../shared/profilemanagement.page";
 import { generateUniqueProfileName, AutomationProfiles } from "../shared/profiledata";
@@ -76,7 +76,9 @@ test.describe.serial("Profile Management - Complete Test Suite", () => {
       // Set up network request listener BEFORE taking action
       const responsePromise = page.waitForResponse(
         (resp) =>
-          resp.url().includes("/api/v1/profiles") && resp.status() === 200
+          resp.url().includes("/api/v1/profiles") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200
       );
 
       // Fill search box
@@ -87,10 +89,12 @@ test.describe.serial("Profile Management - Complete Test Suite", () => {
       await searchBox.fill(profileName);
 
       // Click Refresh button to apply filter
-      await Promise.all([
+      const [searchRefreshResponse] = await Promise.all([
         responsePromise,
         page.getByRole("button", { name: "Refresh" }).click({ force: true }),
       ]);
+      // Validate API response
+      expect(searchRefreshResponse.status()).toBe(200);
 
       // Wait for the profile name to appear in the table body
       const profileRow = page.locator(`table tbody`, { hasText: profileName });
@@ -182,21 +186,8 @@ test.describe.serial("Profile Management - Complete Test Suite", () => {
       const exists = await profileMgmt.profileExists(renamedName);
       expect(exists).toBe(true);
 
-      // Open the renamed profile to check metadata
-      const searchBox = page
-        .getByRole("textbox", { name: /Filter by.*name/i })
-        .first();
-      await searchBox.fill(renamedName);
-      await page.getByRole("button", { name: "Refresh" }).click();
-
-      const firstProfileLink = page
-        .locator(`tr:has-text("${renamedName}") a`)
-        .first();
-      await firstProfileLink.click();
-
-      await expect(page).toHaveURL(
-        /\/profiles\/[a-zA-Z0-9-]+\/(policies|personal-policies)/
-      );
+      // openProfileDetailsFromTable: GET detail + URL assert in page object
+      await profileMgmt.openProfileDetailsFromTable(renamedName);
 
       // Verify metadata fields
       await profileMgmt.verifyLastUpdateFields();
@@ -235,21 +226,8 @@ test.describe.serial("Profile Management - Complete Test Suite", () => {
       const count = await profileMgmt.countProfilesWithName(duplicatedProfile);
       expect(count).toBeGreaterThanOrEqual(1);
 
-      // Open the duplicated profile to check metadata
-      const searchBox = page
-        .getByRole("textbox", { name: /Filter by.*name/i })
-        .first();
-      await searchBox.fill(duplicatedProfile);
-      await page.getByRole("button", { name: "Refresh" }).click();
-
-      const firstProfileLink = page
-        .locator(`tr:has-text("${duplicatedProfile}") a`)
-        .first();
-      await firstProfileLink.click();
-
-      await expect(page).toHaveURL(
-        /\/profiles\/[a-zA-Z0-9-]+\/(policies|personal-policies)/
-      );
+      // openProfileDetailsFromTable: GET detail + URL assert in page object
+      await profileMgmt.openProfileDetailsFromTable(duplicatedProfile);
 
       // Verify metadata fields
       await profileMgmt.verifyLastUpdateFields();

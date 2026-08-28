@@ -1,136 +1,250 @@
-# WizyEMM Automation Testing #
+# WizyEMM Automation Testing
 
-This project uses [Playwright](https://playwright.dev/) to automate end-to-end tests and other repetitive test cases. It helps ensure application reliability, improve test coverage, and speed up the development workflow through consistent and efficient testing.
+End-to-end UI automation for the WizyEMM console, built with [Playwright](https://playwright.dev/) and TypeScript. It runs real browser tests against live environments to catch regressions before customers do.
 
-The project includes integrated **CI/CD pipelines**, **Slack notifications**, and **cloud-based test report storage** for seamless test automation and reporting.
+**Stack:** Playwright (`@playwright/test`) · TypeScript · Node.js 18 · Allure reporting · GitHub Actions CI/CD
 
-## Setup Instructions ##
+---
 
-**Pre-requisite**
-* Source Code Editor
-* Node JS
-* Admin emails to be added on .env should have access to the namespace
+## Prerequisites
 
-1. **Clone the repository**
-* wizyemm-automation-testing 
+Before you start, make sure you have:
 
-2. **Install Dependencies**
+| Tool | Version | Verify |
+|---|---|---|
+| Node.js (LTS) | 18 or higher | `node -v` |
+| npm | 9 or higher | `npm -v` |
+| Git | any recent | `git --version` |
+| VS Code (recommended) | latest | — |
 
-## How to run tests ##
-1. **Create .env files**
-* Modify the `.env{.dev/.production/.staging}`
-* attributes in the env file
-`NAMESPACE={namespace of customer}`
-`REGION={region of namespace}`
-`DOMAIN={domain of wizyemm}`
-`EMAIL={email to be used as credentials}`
-`PASSWORD={password of the email}`
+You also need an **admin account** whose email has access to the namespace you intend to test. Reach out to the repo owner / QA lead if you don't have one.
 
-2. **Running the test**
-* Run on terminal using the following commands:
-* `npm run test:staging {file}` - Run tests against staging environment
-* `npm run test:prod {file}` - Run tests against production environment
-* `npm run test:dev {file}` - Run tests against development environment
-* Add the filename if you want to run specific tests
+---
 
-## Continuous Integration & Deployment (CI/CD) ##
+## Setup — Step by Step
 
-### GitHub Actions Pipeline ###
+### 1. Clone the repository
 
-This project uses **GitHub Actions** for automated testing on every push and pull request. The pipeline includes:
+```bash
+git clone https://github.com/WizyEMM/wizyemm-automation-testing.git
+cd wizyemm-automation-testing
+```
 
-**Trigger Events:**
-- Push to `main` or `development` branches
-- Pull requests to `main` branch
-- Manual trigger via workflow dispatch (supports optional release title from Jira)
+### 2. Install dependencies
 
-**Pipeline Steps:**
-1. **Code Checkout** - Retrieves the latest code
-2. **Environment Setup** - Installs Node.js 18 and dependencies
-3. **Playwright Setup** - Installs Playwright browsers
-4. **Test Execution**:
-   - Runs login tests first
-   - Runs full test suite across all modules (profile, application, configuration, dashboard, fleet, notifications, settings)
-5. **Report Generation** - Generates Allure test reports
-6. **Artifact Upload** - Uploads test results as GitHub artifacts
-7. **Cloud Integration** - Uploads reports to Google Cloud Storage
-8. **Slack Notification** - Sends test results to Slack channel
+```bash
+npm install
+```
 
-**Workflow File:** `.github/workflows/playwright-tests.yml`
+(Use `npm ci` instead if you want a clean, lockfile-exact install.)
 
-### Manual Pipeline Trigger ###
+### 3. Install the Playwright browsers
 
-To run the pipeline manually:
+Downloads the browser binaries Playwright drives. Run once per machine.
 
-1. Go to **GitHub Repository** → **Actions** tab
-2. Select **Playwright Tests** workflow from the left sidebar
-3. Click **Run workflow** button
-4. (Optional) Enter a release title from Jira in the input field
-5. Click **Run workflow** to start the pipeline
+```bash
+npx playwright install
+```
 
-The pipeline will execute all steps and send results to Slack upon completion.
+### 4. Create your environment (`.env`) files
 
-## Cloud Integration ##
+**This is the part people miss.** The framework does **not** read a single `.env`. `utils/env.ts` loads a **different file per environment**, chosen by the `TEST_ENV` variable that each npm script sets for you:
 
-### Google Cloud Storage (GCS) ##
+```ts
+// utils/env.ts
+const envFileName = process.env.TEST_ENV ? `.env.${process.env.TEST_ENV}` : ".env";
+```
 
-Test reports are automatically uploaded to Google Cloud Storage for centralized storage and easy access:
+So the npm script you run decides which file is loaded:
 
-**Features:**
-- Automatic authentication using GCP service account credentials (stored in GitHub Secrets)
-- Version-based organization: `v{VERSION}-Tr.{TEST_RUN_NUMBER}`
-- Automatic version detection from API response
-- Signed URLs generated for secure, temporary access (valid for 7 days)
-- Storage bucket: `gs://emm-test-artifacts/`
+| Command | Sets `TEST_ENV` | Loads file |
+|---|---|---|
+| `npm run test:staging` | `staging` | `.env.staging` |
+| `npm run test:prod` | `production` | `.env.production` |
+| `npm run test:dev` | `development` | `.env.development` |
+| `npm run test:jamf` | `jamf` | `.env.jamf` |
+| `npm test` | *(unset)* | `.env` (fallback) |
 
-**Report Structure:**
-- Reports organized by application version
-- Multiple test runs tracked per version
-- Full Allure reports with test details, screenshots, and logs
+Create the file(s) for the environment(s) you actually test against, in the **project root**. Each file has exactly these five keys:
 
-## Slack Integration ##
+```dotenv
+NAMESPACE=<namespace of the instance>
+REGION=<region of the instance>
+DOMAIN=<domain of the instance>
+EMAIL=<admin email used as credentials>
+PASSWORD=<password for that email>
+```
 
-### Automated Test Reporting ##
+`env.ts` composes the base URL the tests hit as:
 
-Test results are automatically sent to Slack after each test run.
+```
+https://{NAMESPACE}.{REGION}.{DOMAIN}
+```
 
-**Configuration File:** `config/slack-report-config.json`
+**Example — `.env.staging`:**
 
-The Slack integration provides:
-- Test status summary (All Passed, Failed, Flaky)
-- Execution time and metadata
-- Failed test details (up to 10 tests)
-- Direct link to full Allure report via signed URL
-- Channel: `#test-reports` (Asia/Manila timezone)
+```dotenv
+NAMESPACE=teama-automation
+REGION=staging-us
+DOMAIN=wizyemm.app
+EMAIL=automation@example.com
+PASSWORD=your-password
+```
 
-### Contribution guidelines ###
+...produces `https://teama-automation.staging-us.wizyemm.app`.
 
-#### Writing tests ####
-* Use Playwright and follow the `tests/` folder structure
+**Example — `.env.jamf`** (note the JAMF domain differs):
 
-#### Code review ####
-* All pull requests must be reviewed by at least one core team member before merging
+```dotenv
+NAMESPACE=qa-test-jamf-automation
+REGION=stage
+DOMAIN=manager-for-android.jamflabs.com
+EMAIL=<jamf admin email>
+PASSWORD=<jamf admin password>
+```
 
-#### Other guidelines ####
-* Coding style or formatting rules (e.g., use Prettier, proper indentation)
-* Branch naming conventions
-* Commit message format (e.g., Conventional Commits)
-* Any required documentation or comments in the code
+> ⚠️ **Never commit `.env` files.** They hold real credentials and are already excluded via `.gitignore` (`.env*`). If you accidentally stage one, unstage it before committing. The admin account must have access to the target namespace or the tests will fail at login.
 
-## Allure Reporting ##
+---
 
-Test reports are generated using the [Allure Framework](https://docs.qameta.io/allure/):
+## Running Tests
 
-**Local Usage:**
-- `npm run allure:report` - Generate and open Allure report locally (includes history)
-- `npm run clean:allure` - Clean previous Allure results
+Tests run **headed** (browser visible) by default via the npm scripts, on **Chromium** locally.
 
-**Cloud Reports:**
-- Reports are automatically generated and uploaded to Google Cloud Storage
-- Access via signed URLs shared in Slack notifications
-- Reports valid for 7 days from generation
+```bash
+npm run test:staging      # run the full suite against staging
+npm run test:prod         # against production
+npm run test:dev          # against development
+npm run test:jamf         # against the JAMF instance
+```
 
-### Who do I talk to? ###
+### Run a specific file or folder
 
-* Repo Owner or Admins
-* For general questions, contact the QA team on Slack (#wizyemm-qa)
+Append `--` then the path (the `--` passes the argument through to Playwright):
+
+```bash
+npm run test:staging -- tests/login/login.spec.ts
+npm run test:staging -- tests/fleet
+```
+
+### Login & language tests (standalone config)
+
+Login and language tests use their own config that does **not** use the cached auth session — each test logs in fresh:
+
+```bash
+# Normal instance
+npx playwright test --config=playwright.login.config.ts
+
+# JAMF instance
+npx cross-env TEST_ENV=jamf npx playwright test --config=playwright.login.jamf.config.ts
+```
+
+### Headless mode
+
+The npm scripts set `HEADLESS=false`. To run without a visible browser (e.g. faster, or CI-like):
+
+```bash
+npx playwright test --project=chromium
+```
+
+---
+
+## Authentication (how login is handled)
+
+You do **not** log in manually in feature tests. A global setup (`utils/authManager/globalSetup.ts`) runs before the suite:
+
+1. Checks `Cookies/` for a valid cached session.
+2. If valid → restores it (no browser login).
+3. If missing/expired → performs a real browser login using your `.env` credentials and caches it.
+4. Saves the browser storage state to `user/.auth/` so every test starts already authenticated.
+
+The cache and storage-state files (`Cookies/auth-cache*.json`, `user/.auth/user*.json`) are **gitignored** and managed automatically — don't edit them by hand. Delete them if you need to force a fresh login.
+
+---
+
+## Reports
+
+### Playwright HTML report
+
+```bash
+npx playwright show-report
+```
+
+### Allure report (richer, with history/trends)
+
+```bash
+npm run allure:report     # builds history + generates + opens the report
+npm run clean:allure      # clears allure-results before a fresh run (Windows)
+```
+
+Generated report folders (`allure-results/`, `allure-report/`, `playwright-report/`, `test-results/`) are gitignored — never commit them.
+
+---
+
+## Cloud Reports (Google Cloud Storage)
+
+CI uploads every Allure report to GCS so results outlive the GitHub Actions artifact window and can be linked from Slack. Authentication uses a GCP service account stored in GitHub Secrets — nothing to configure locally.
+
+Reports land in the `emm-test-artifacts` bucket, namespaced by instance so parallel matrix runs never overwrite each other:
+
+```
+gs://emm-test-artifacts/allure-reports/<instance>/v<VERSION>-Tr.<N>/
+```
+
+- `<instance>` is omitted for legacy V2 runs, which keep the original flat path.
+- `<VERSION>` is detected automatically from the API response (falling back to a timestamp).
+- `Tr.<N>` auto-increments per version, so each version keeps its full run history and trend.
+- Raw `allure-results` attachments are uploaded alongside the report so WizyReport artifact URLs resolve.
+
+Access is via **signed URLs valid for 7 days**, generated by `scripts/generate-signed-url.js` and posted to Slack.
+
+---
+
+## Slack Integration
+
+Results are posted to Slack automatically after each CI run by `scripts/slack-reporter.js`, configured in `config/slack-report-config.json` (channel `#test-reports`, `Asia/Manila` timezone).
+
+Each message includes:
+
+- Overall status — All Passed, Failed, or Flaky
+- Execution time and run metadata
+- Failed test details, up to 10 tests
+- A direct link to the full Allure report via its signed URL
+
+---
+
+## Project Structure
+
+```
+tests/                 End-to-end specs, organized by feature
+  _base/               Shared test fixture (JAMF session handling)
+  login/               Login + language tests (standalone configs)
+  dashboard/ fleet/ enrollment/ application/ configuration/
+  profile/ settings/ notifications/ adminaccounts/
+utils/
+  env.ts               Loads the right .env and composes baseURL
+  helpers.ts           Shared action helpers (clicks, waits, search, etc.)
+  authManager/         Login, session caching, JAMF auth flow, globalSetup
+scripts/               Allure history, signed URLs, Slack + WizyReport reporting
+.github/               CI/CD workflows and composite actions
+playwright.config.ts             Main config (feature tests, globalSetup auth)
+playwright.login.config.ts       Standalone login/language tests
+playwright.login.jamf.config.ts  JAMF login tests
+```
+
+---
+
+## Contribution Guidelines
+
+- **Writing tests:** follow the Page Object Model 3-file pattern (`*.page.ts`, `*.ts`, `*.spec.ts`) and the existing `tests/` structure.
+- **Branches:** branch off `development`, name them `<type>/<short-description>` (see the Branch Naming Guide).
+- **Commits:** use Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:` …) — see the Commit Message Guide.
+- **Pull requests:** fill out the PR template completely and link the related ticket. At least one core-team approval is required; no direct pushes to `main` or `development`.
+- See the team's **Do's and Don'ts** and **Automation Pipeline** docs for full detail.
+
+---
+
+## Who Do I Talk To?
+
+- Repo owner / admins for access and reviews.
+- QA team on Slack (**#wizyemm-qa**) for general questions.
