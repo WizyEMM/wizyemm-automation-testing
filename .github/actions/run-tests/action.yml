@@ -89,12 +89,12 @@ runs:
       # results present + non-zero exit = tests ran and some failed (stay green);
       # no new results + non-zero exit = nothing ran (crash) -> fail loudly.
       run: |
-        BEFORE=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        BEFORE=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
         set +e
         npx playwright test --config=${{ inputs.login_config }} --reporter=line,allure-playwright
         CODE=$?
         set -e
-        AFTER=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        AFTER=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
         if [ "$CODE" -ne 0 ]; then
           if [ "$AFTER" -gt "$BEFORE" ]; then
             echo "⚠️ Login tests reported failures — captured in Allure/Slack (workflow stays green)."
@@ -116,12 +116,12 @@ runs:
         TEST_ENV: ${{ inputs.test_env }}
       # Green-check with crash detection (see note on the login step above).
       run: |
-        BEFORE=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        BEFORE=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
         set +e
         npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=firefox --reporter=line,allure-playwright
         CODE=$?
         set -e
-        AFTER=$(ls allure-results/*-result.json 2>/dev/null | wc -l)
+        AFTER=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
         if [ "$CODE" -ne 0 ]; then
           if [ "$AFTER" -gt "$BEFORE" ]; then
             echo "⚠️ Some tests reported failures — captured in Allure/Slack (workflow stays green)."
