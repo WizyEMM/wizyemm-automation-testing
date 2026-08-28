@@ -8,6 +8,10 @@ inputs:
   gcp_sa_key:
     description: 'GCP Service Account Key'
     required: true
+  instance:
+    description: 'Instance/environment name. When set, namespaces the report path (allure-reports/<instance>/...) so parallel runs never collide. When empty, keeps the legacy flat path (allure-reports/...) so the still-live v2 workflow is unaffected.'
+    required: false
+    default: ''
 
 outputs:
   signed_url:
@@ -34,17 +38,29 @@ runs:
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         VERSION: ${{ inputs.version }}
+        INSTANCE: ${{ inputs.instance }}
       shell: bash
       run: |
         if [ -z "$VERSION" ]; then
           VERSION=$(date +%Y%m%d-%H%M%S)
         fi
-        
-        echo "📊 Checking existing test runs for version: $VERSION"
-        
-        FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/allure-reports/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
+
+        # When an instance is given, namespace reports under it so parallel/matrix
+        # runs never overwrite each other and each keeps its own history/trend.
+        # When empty (legacy v2), keep the original flat path unchanged.
+        if [ -n "$INSTANCE" ]; then
+          INSTANCE_DIR="allure-reports/${INSTANCE}"
+          REPORT_PREFIX="${INSTANCE}/"
+        else
+          INSTANCE_DIR="allure-reports"
+          REPORT_PREFIX=""
+        fi
+
+        echo "📊 Checking existing test runs for '${INSTANCE:-<legacy>}', version: $VERSION"
+
+        FOLDER_LIST=$(gcloud storage ls "gs://emm-test-artifacts/${INSTANCE_DIR}/" 2>/dev/null | grep "v${VERSION}-Tr\." || true)
         echo "Found folders: $FOLDER_LIST"
-        
+
         if [ -z "$FOLDER_LIST" ]; then
           TEST_RUN=1
           echo "ℹ️ No existing runs found, starting with Tr.1"
@@ -53,8 +69,8 @@ runs:
           TEST_RUN=$((HIGHEST + 1))
           echo "ℹ️ Found highest run number: $HIGHEST, next run will be: Tr.$TEST_RUN"
         fi
-        
-        REPORT_PATH="allure-reports/v${VERSION}-Tr.${TEST_RUN}"
+
+        REPORT_PATH="${INSTANCE_DIR}/v${VERSION}-Tr.${TEST_RUN}"
         
         echo "📤 Uploading Allure report to GCS..."
         gcloud storage cp -r allure-report/* "gs://emm-test-artifacts/$REPORT_PATH/" || exit 1
@@ -83,4 +99,8 @@ runs:
         
         echo "✅ Signed URL generated successfully"
         echo "signed_url=$SIGNED_URL" >> $GITHUB_OUTPUT
-        echo "report_version=v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
+        # report_version is the path segment after allure-reports/ — it includes
+        # the instance folder (when set) so WizyReport attachment URLs
+        # (.../allure-reports/${report_version}/data/attachments) still resolve.
+        # For legacy v2 (no instance) REPORT_PREFIX is empty -> unchanged output.
+        echo "report_version=${REPORT_PREFIX}v${VERSION}-Tr.${TEST_RUN}" >> $GITHUB_OUTPUT
