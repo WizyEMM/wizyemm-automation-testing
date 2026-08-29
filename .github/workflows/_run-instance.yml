@@ -47,9 +47,7 @@ jobs:
           namespace: ${{ secrets.NAMESPACE }}
           password: ${{ secrets.PASSWORD }}
           region: ${{ secrets.REGION }}
-          # Optional: only set on instances that get stuck loading without a
-          # localStorage key seeded before the app boots (e.g. team-a). Empty
-          # on instances that don't have these secrets configured — no-op.
+          # Optional; unset = no-op (see utils/env.ts)
           lscache_key: ${{ secrets.LSCACHE_KEY }}
           lscache_value: ${{ secrets.LSCACHE_VALUE }}
 

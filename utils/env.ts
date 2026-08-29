@@ -12,9 +12,7 @@ const domain = process.env.DOMAIN || "";
 const email = process.env.EMAIL || "";
 const password = process.env.PASSWORD || "";
 
-// Some instances (e.g. team-a) need a localStorage key set before the app
-// finishes loading, or it hangs indefinitely. Unset on instances that don't
-// need it, so this stays a no-op everywhere else.
+// Optional per-instance localStorage bootstrap (see globalSetup.ts)
 const lscacheKey = process.env.LSCACHE_KEY || "";
 const lscacheValue = process.env.LSCACHE_VALUE || "";
 

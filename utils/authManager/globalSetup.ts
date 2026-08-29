@@ -42,12 +42,8 @@ async function globalSetup(fullConfig: FullConfig) {
     isJamf ? { locale: "en-US" } : {}
   );
 
-  // Some instances (e.g. team-a) get stuck on the loading screen unless a
-  // localStorage key is present before the app's own scripts run. Setting it
-  // via addInitScript applies it on every navigation in this context, so it's
-  // in place for login and gets captured into storageState for all tests.
+  // team-a hangs on the loading screen without this key set before app load.
   if (config.lscacheKey && config.lscacheValue) {
-    console.log(`📌 Seeding localStorage["${config.lscacheKey}"] before app load`);
     await context.addInitScript(
       ([key, value]) => {
         window.localStorage.setItem(key, value);
