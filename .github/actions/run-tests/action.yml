@@ -27,6 +27,14 @@ inputs:
   region:
     description: 'Resolved REGION secret'
     required: true
+  lscache_key:
+    description: 'Optional localStorage key to seed before the app loads (instance-specific)'
+    required: false
+    default: ''
+  lscache_value:
+    description: 'Optional localStorage value to seed before the app loads (instance-specific)'
+    required: false
+    default: ''
 
 outputs:
   version:
@@ -83,6 +91,8 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
+        LSCACHE_KEY: ${{ inputs.lscache_key }}
+        LSCACHE_VALUE: ${{ inputs.lscache_value }}
       # Green-check: failing TEST CASES must not red the workflow, but a real
       # crash (missing browsers, bad config, spec syntax error) must still fail.
       # We tell them apart by whether new Allure result files were produced:
@@ -114,6 +124,8 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
+        LSCACHE_KEY: ${{ inputs.lscache_key }}
+        LSCACHE_VALUE: ${{ inputs.lscache_value }}
       # Green-check with crash detection (see note on the login step above).
       run: |
         BEFORE=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)

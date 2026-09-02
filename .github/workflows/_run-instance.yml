@@ -47,6 +47,9 @@ jobs:
           namespace: ${{ secrets.NAMESPACE }}
           password: ${{ secrets.PASSWORD }}
           region: ${{ secrets.REGION }}
+          # Optional; unset = no-op (see utils/env.ts)
+          lscache_key: ${{ secrets.LSCACHE_KEY }}
+          lscache_value: ${{ secrets.LSCACHE_VALUE }}
 
       - uses: ./.github/actions/generate-report
         if: always()

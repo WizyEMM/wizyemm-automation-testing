@@ -42,6 +42,16 @@ async function globalSetup(fullConfig: FullConfig) {
     isJamf ? { locale: "en-US" } : {}
   );
 
+  // team-a hangs on the loading screen without this key set before app load.
+  if (config.lscacheKey && config.lscacheValue) {
+    await context.addInitScript(
+      ([key, value]) => {
+        window.localStorage.setItem(key, value);
+      },
+      [config.lscacheKey, config.lscacheValue]
+    );
+  }
+
   const authEnv = isJamf ? JAMF_AUTH_ENV : undefined;
 
   let didFreshLogin = false;
