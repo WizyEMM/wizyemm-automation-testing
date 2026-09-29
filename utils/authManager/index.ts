@@ -69,6 +69,18 @@ export async function performLogin(
   await page.goto(config.baseUrl);
   console.log(`✓ Navigated to ${config.baseUrl}`);
 
+  // Set-up localStorage
+  await page.evaluate(
+    ({key, value}) => {
+      localStorage.setItem(key, value);
+    },
+    {
+      key: config.lscacheKey,
+      value: config.lscacheValue,
+    }
+  );
+  console.log(`✓ Set localStorage`);
+
   // Click Login button to go to login form
   try {
     await page.getByRole("button", { name: "Log in" }).click();
