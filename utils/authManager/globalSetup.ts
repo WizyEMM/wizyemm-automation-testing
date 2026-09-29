@@ -89,7 +89,6 @@ async function globalSetup(fullConfig: FullConfig) {
         await warmupPage.close();
       }
     }
-
     // For normal instance: capture storage state from fresh page
     if (!isJamf) {
       // Save Playwright storage state for test contexts to load
@@ -98,6 +97,20 @@ async function globalSetup(fullConfig: FullConfig) {
       // Navigate to baseUrl first to ensure domain sets session cookies
       await page.goto(`${config.baseUrl}`, { waitUntil: "domcontentloaded" });
       console.log(`✓ Navigated to base URL`);
+      console.log(`=> Setting localStorage cache`);
+      if (!didFreshLogin) { // if existing auth token exists, set localStorage
+        // Set-up localStorage
+        await page.evaluate(
+          ({key, value}) => {
+            localStorage.setItem(key, value);
+          },
+          {
+            key: config.lscacheKey,
+            value: config.lscacheValue,
+          }
+        );
+        console.log(`✓ Set localStorage`);
+      }
       
       // Then navigate to dashboard to ensure full session establishment
       await page.goto(`${config.baseUrl}/dashboard`, { waitUntil: "domcontentloaded" });
