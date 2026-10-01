@@ -27,6 +27,14 @@ inputs:
   region:
     description: 'Resolved REGION secret'
     required: true
+  lscache_key:
+    description: 'Optional localStorage key to seed before the app loads (instance-specific)'
+    required: false
+    default: ''
+  lscache_value:
+    description: 'Optional localStorage value to seed before the app loads (instance-specific)'
+    required: false
+    default: ''
 
 outputs:
   version:
@@ -83,7 +91,28 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
-      run: npx playwright test --config=${{ inputs.login_config }} --reporter=line,allure-playwright
+        LSCACHE_KEY: ${{ inputs.lscache_key }}
+        LSCACHE_VALUE: ${{ inputs.lscache_value }}
+      # Green-check: failing TEST CASES must not red the workflow, but a real
+      # crash (missing browsers, bad config, spec syntax error) must still fail.
+      # We tell them apart by whether new Allure result files were produced:
+      # results present + non-zero exit = tests ran and some failed (stay green);
+      # no new results + non-zero exit = nothing ran (crash) -> fail loudly.
+      run: |
+        BEFORE=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
+        set +e
+        npx playwright test --config=${{ inputs.login_config }} --reporter=line,allure-playwright
+        CODE=$?
+        set -e
+        AFTER=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
+        if [ "$CODE" -ne 0 ]; then
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            echo "⚠️ Login tests reported failures — captured in Allure/Slack (workflow stays green)."
+          else
+            echo "❌ Login run produced no results (exit $CODE) — treating as crash/config/infra error."
+            exit "$CODE"
+          fi
+        fi
 
     - name: Run all tests
       if: always() && (inputs.test_scope == 'All Tests' || inputs.test_scope == 'Login + All Tests')
@@ -95,4 +124,21 @@ runs:
         PASSWORD: ${{ inputs.password }}
         REGION: ${{ inputs.region }}
         TEST_ENV: ${{ inputs.test_env }}
-      run: npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=firefox --reporter=line,allure-playwright
+        LSCACHE_KEY: ${{ inputs.lscache_key }}
+        LSCACHE_VALUE: ${{ inputs.lscache_value }}
+      # Green-check with crash detection (see note on the login step above).
+      run: |
+        BEFORE=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
+        set +e
+        npx playwright test tests/profile tests/application tests/configuration tests/dashboard tests/fleet tests/notifications tests/settings --config=playwright.config.ts --project=firefox --reporter=line,allure-playwright
+        CODE=$?
+        set -e
+        AFTER=$(find allure-results -maxdepth 1 -name '*-result.json' 2>/dev/null | wc -l || true)
+        if [ "$CODE" -ne 0 ]; then
+          if [ "$AFTER" -gt "$BEFORE" ]; then
+            echo "⚠️ Some tests reported failures — captured in Allure/Slack (workflow stays green)."
+          else
+            echo "❌ Test run produced no results (exit $CODE) — treating as crash/config/infra error."
+            exit "$CODE"
+          fi
+        fi

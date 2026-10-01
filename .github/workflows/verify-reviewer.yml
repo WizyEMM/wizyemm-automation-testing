@@ -1,0 +1,38 @@
+name: Verify Authorized Reviewer
+
+on:
+  pull_request:
+    branches:
+      - 'refactor/**'
+  pull_request_review:
+    types: [submitted, dismissed]
+
+jobs:
+  check-reviewer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for authorized approval
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const AUTHORIZED = ['vsalanga', 'nez-qa'];
+            const pr = context.payload.pull_request || context.payload.review?.pull_request;
+            if (!pr) { core.setFailed('Cannot resolve PR'); return; }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const approved = reviews.some(r =>
+              r.state === 'APPROVED' &&
+              AUTHORIZED.map(a => a.toLowerCase()).includes(r.user.login.toLowerCase())
+            );
+
+            if (!approved) {
+              core.setFailed('Approval required from: vsalanga or nez-qa');
+            } else {
+              core.info('Authorized approval found');
+            }

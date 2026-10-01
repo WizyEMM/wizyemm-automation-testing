@@ -20,6 +20,7 @@
  * For non-Jamf TEST_ENV values this is a no-op and behaves identically to
  * `@playwright/test`.
  */
+
 import { test as base, expect, type BrowserContext } from "@playwright/test";
 import * as path from "path";
 import * as fs from "fs";
@@ -66,6 +67,7 @@ export const test = base.extend({
           await page
             .waitForFunction(
               () => (window as any).FIREBASE_TOKEN !== undefined,
+              undefined,
               { timeout: FIREBASE_TOKEN_TIMEOUT_MS }
             )
             .catch(() => {

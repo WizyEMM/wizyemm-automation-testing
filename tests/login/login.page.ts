@@ -19,6 +19,15 @@ export class LoginPage {
   }
 
   async navigateToLogin() {
+    // team-a hangs on load without this key set (see utils/env.ts)
+    if (config.lscacheKey && config.lscacheValue) {
+      await this.page.addInitScript(
+        ([key, value]) => {
+          window.localStorage.setItem(key, value);
+        },
+        [config.lscacheKey, config.lscacheValue]
+      );
+    }
     await this.page.goto(config.baseUrl);
   }
 

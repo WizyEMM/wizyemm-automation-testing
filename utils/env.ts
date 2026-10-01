@@ -12,6 +12,9 @@ const domain = process.env.DOMAIN || "";
 const email = process.env.EMAIL || "";
 const password = process.env.PASSWORD || "";
 
+// Optional per-instance localStorage bootstrap (see globalSetup.ts)
+const lscacheKey = process.env.LSCACHE_KEY || "";
+const lscacheValue = process.env.LSCACHE_VALUE || "";
 
 const baseUrl = `https://${namespace}.${region}.${domain}`;
 
@@ -22,4 +25,6 @@ export default {
   domain,
   email,
   password,
+  lscacheKey,
+  lscacheValue,
 };

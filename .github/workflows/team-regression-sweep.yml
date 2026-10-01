@@ -1,0 +1,30 @@
+name: Team Regression Sweep (All Teams)
+
+# Runs the suite against all three per-team staging instances in parallel via a
+# matrix. One dispatch = a full cross-team run. Each leg reports independently
+# (reports are namespaced per instance so they never collide).
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: 'Select which tests to run (applied to every team)'
+        required: true
+        type: choice
+        options:
+          - 'All Tests'
+          - 'Login + All Tests'
+          - 'Login Tests Only'
+        default: 'All Tests'
+
+jobs:
+  sweep:
+    strategy:
+      fail-fast: false
+      matrix:
+        instance: [team-a, team-b, team-c]
+    uses: ./.github/workflows/_run-instance.yml
+    with:
+      instance: ${{ matrix.instance }}
+      test_scope: ${{ github.event.inputs.test_scope }}
+    secrets: inherit
