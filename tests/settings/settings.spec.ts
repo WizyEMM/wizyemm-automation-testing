@@ -17,11 +17,11 @@ test.describe("Personal Settings Tests", () => {
     await settingsPage.navigateToSettings();
   });
 
-  test("should cycle through all available languages", async ({ page }) => {
+  test("settingsLanguageSwitching - should cycle through all available languages", async ({ page }) => {
     await settingsPage.cycleLanguages(languageCycle);
   });
 
-  test("should update GDPR settings with DPO and EU Representative information", async ({
+  test("updateGDPRSettings - should update GDPR settings with DPO and EU Representative information", async ({
     page,
   }) => {
     const testData = generateUniqueGDPRData();
