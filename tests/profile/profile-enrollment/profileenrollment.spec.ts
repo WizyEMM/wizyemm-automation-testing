@@ -46,7 +46,7 @@ test.describe("Profile Enrollment Settings", () => {
     }
   });
 
-  test("should configure enrollment settings and regenerate token", async ({
+  test("configureSettingsAndRegenerateToken - should configure enrollment settings and regenerate token", async ({
     page,
   }) => {
     await profileManagementPage.createProfile(
@@ -68,7 +68,7 @@ test.describe("Profile Enrollment Settings", () => {
     await enrollmentPage.regenerateEnrollmentToken();
   });
 
-  test("should configure enrollment with default settings", async ({
+  test("configureDefaultEnrollment - should configure enrollment with default settings", async ({
     page,
   }) => {
     await profileManagementPage.createProfile(
