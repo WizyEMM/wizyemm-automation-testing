@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/);
 });
 
-test("userSort", async ({ page }) => {
+test("userSort - sort users by types", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
 
   await userConfigPage.navigateToConfiguration();
@@ -49,7 +49,7 @@ test.describe("User CRUD Operations", () => {
     await userConfigPage.navigateToUsers();
   });
 
-  test("should create a new user", async ({ page }) => {
+  test("createUser - should create a new user", async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -71,7 +71,7 @@ test.describe("User CRUD Operations", () => {
     await expect(page.getByText(uniqueUsername)).toBeVisible();
   });
 
-  test("should update an existing user", async ({ page }) => {
+  test("updateUser - should update an existing user", async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -96,7 +96,7 @@ test.describe("User CRUD Operations", () => {
     );
   });
 
-  test("should delete a user", async ({ page }) => {
+  test("deleteUser - should delete a user", async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
