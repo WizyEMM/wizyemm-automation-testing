@@ -9,7 +9,7 @@ import {
 
 
 test.describe("Dashboard Navigation", () => {
-  test("should navigate through main menu items and return to dashboard", async ({
+  test("navigateMenu - should navigate through main menu items and return to dashboard", async ({
     page,
   }) => {
     const dashboardPage = new DashboardPage(page);
@@ -35,7 +35,7 @@ test.describe("Dashboard Navigation", () => {
     await dashboardPage.verifyURL(`${config.baseUrl}/dashboard`);
   });
 
-  test("should display all dashboard widgets", async ({ page }) => {
+  test("displayAllWidgets - should display all dashboard widgets", async ({ page }) => {
     const dashboardPage = new DashboardPage(page);
 
     // Auth is handled by globalSetup
@@ -45,7 +45,7 @@ test.describe("Dashboard Navigation", () => {
 });
 
 test.describe("Header Navigation", () => {
-  test("should open help center and settings from header icons", async ({
+  test("openHeaderIcons - should open help center and settings from header icons", async ({
     page,
   }) => {
     const dashboardPage = new DashboardPage(page);
@@ -67,7 +67,7 @@ test.describe("Header Navigation", () => {
     await headerNav.verifyHelpCenterURL(helpCenterPage2);
   });
 
-  test("should open alerts and notifications dropdowns", async ({ page }) => {
+  test("openAlertsNotifs - should open alerts and notifications dropdowns", async ({ page }) => {
     const dashboardPage = new DashboardPage(page);
     const alertPage = new AlertEventsPage(page);
 
@@ -79,7 +79,7 @@ test.describe("Header Navigation", () => {
 });
 
 test.describe("Dashboard Customization", () => {
-  test("should drag and drop widgets to reorder dashboard", async ({
+  test("dragDropWidgets - should drag and drop widgets to reorder dashboard", async ({
     page,
   }) => {
     const customizePage = new DashboardCustomizationPage(page);
@@ -97,7 +97,7 @@ test.describe("Dashboard Customization", () => {
     
   });
 
-  test("should reset dashboard to default layout", async ({ page }) => {
+  test("resetDashboard - should reset dashboard to default layout", async ({ page }) => {
     const customizePage = new DashboardCustomizationPage(page);
     const dashboardPage = new DashboardPage(page);
 

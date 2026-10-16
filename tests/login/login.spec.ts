@@ -4,21 +4,21 @@ import { forgotPassword, loginLocal, loginLocalWithInvalidCredentials } from "./
 
 test.describe.configure({ timeout: 60_000 });
 
-test("localLogin",
+test("localLogin - should navigate to local login page",
     async ({ page }) => {
         await loginLocal({ page });
         await expect(page).toHaveURL(`${config.baseUrl}/dashboard`);
     }
 );
 
-test ("localLoginWithInvalidCredentials",
+test ("localLoginWithInvalidCredentials - should try logging in with invalid email ",
     async ({ page }) => {
         await loginLocalWithInvalidCredentials({ page });
         await expect(page.getByText('Wrong email or password')).toBeVisible();
     }
 );
 
-test("forgotPassword",
+test("forgotPassword - should navigate to forgot password page",
     async ({ page }) => {
         await forgotPassword({ page });
     }
