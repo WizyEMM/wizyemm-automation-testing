@@ -9,7 +9,7 @@ import {
 
 
 test.describe("Dashboard Navigation", () => {
-  test("navigateMenu - should navigate through main menu items and return to dashboard", async ({
+  test("navigateMenu - should navigate through main menu items and return to dashboard", { tag: [`@smoke`, `@regression`] }, async ({
     page,
   }) => {
     const dashboardPage = new DashboardPage(page);
@@ -35,7 +35,7 @@ test.describe("Dashboard Navigation", () => {
     await dashboardPage.verifyURL(`${config.baseUrl}/dashboard`);
   });
 
-  test("displayAllWidgets - should display all dashboard widgets", async ({ page }) => {
+  test("displayAllWidgets - should display all dashboard widgets", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const dashboardPage = new DashboardPage(page);
 
     // Auth is handled by globalSetup
@@ -45,7 +45,7 @@ test.describe("Dashboard Navigation", () => {
 });
 
 test.describe("Header Navigation", () => {
-  test("openHeaderIcons - should open help center and settings from header icons", async ({
+  test("openHeaderIcons - should open help center and settings from header icons", { tag: [`@smoke`, `@regression`] }, async ({
     page,
   }) => {
     const dashboardPage = new DashboardPage(page);
@@ -67,7 +67,7 @@ test.describe("Header Navigation", () => {
     await headerNav.verifyHelpCenterURL(helpCenterPage2);
   });
 
-  test("openAlertsNotifs - should open alerts and notifications dropdowns", async ({ page }) => {
+  test("openAlertsNotifs - should open alerts and notifications dropdowns", { tag: [`@regression`] }, async ({ page }) => {
     const dashboardPage = new DashboardPage(page);
     const alertPage = new AlertEventsPage(page);
 
@@ -79,7 +79,7 @@ test.describe("Header Navigation", () => {
 });
 
 test.describe("Dashboard Customization", () => {
-  test("dragDropWidgets - should drag and drop widgets to reorder dashboard", async ({
+  test("dragDropWidgets - should drag and drop widgets to reorder dashboard", { tag: [`@smoke`, `@regression`] }, async ({
     page,
   }) => {
     const customizePage = new DashboardCustomizationPage(page);
@@ -97,7 +97,8 @@ test.describe("Dashboard Customization", () => {
     
   });
 
-  test("resetDashboard - should reset dashboard to default layout", async ({ page }) => {
+  // no direct equivalent in Wizy Bin, will categorize as regression
+  test("resetDashboard - should reset dashboard to default layout", { tag: [`@regression`] }, async ({ page }) => {
     const customizePage = new DashboardCustomizationPage(page);
     const dashboardPage = new DashboardPage(page);
 
