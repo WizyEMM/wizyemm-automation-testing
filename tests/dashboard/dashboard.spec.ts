@@ -98,7 +98,7 @@ test.describe("Dashboard Customization", () => {
   });
 
   // no direct equivalent in Wizy Bin, will categorize as regression
-  test("resetDashboard - should reset dashboard to default layout", { tag: [`@regression`] }, async ({ page }) => {
+  test("resetDashboard - should reset dashboard to default layout", { tag: [`@smoke`, `@regression`] }, async ({ page }) => {
     const customizePage = new DashboardCustomizationPage(page);
     const dashboardPage = new DashboardPage(page);
 
