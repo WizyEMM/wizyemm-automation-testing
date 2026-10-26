@@ -49,7 +49,7 @@ test.describe("User CRUD Operations", () => {
     await userConfigPage.navigateToUsers();
   });
 
-  test("createUser - should create a new user", async ({ page }) => {
+  test("createUser - should create a new user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -71,7 +71,7 @@ test.describe("User CRUD Operations", () => {
     await expect(page.getByText(uniqueUsername)).toBeVisible();
   });
 
-  test("updateUser - should update an existing user", async ({ page }) => {
+  test("updateUser - should update an existing user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -96,7 +96,7 @@ test.describe("User CRUD Operations", () => {
     );
   });
 
-  test("deleteUser - should delete a user", async ({ page }) => {
+  test("deleteUser - should delete a user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -152,7 +152,7 @@ test("wifi", async ({ page }) => {
   await userConfigPage.refreshTable();
 });
 
-test("bundledActions", async ({ page }) => {
+test("bundledActions", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { bundledActions } = userConfigurationData;
 
