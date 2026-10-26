@@ -56,7 +56,7 @@ test.describe("Fleet Management", () => {
     const fleetPage = new fleetManagementPage(page);
 
     await fleetPage.navigateToGeofencing();
-s
+
     await fleetPage.clickSortColumn(geofencingData.sortColumns[0]);
 
     await fleetPage.applyMultipleColumnFilters(
