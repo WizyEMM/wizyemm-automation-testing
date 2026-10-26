@@ -23,7 +23,7 @@ test.describe("Language Switching", () => {
   });
 
   for (const languageSwitch of languageTestData.languageSwitches) {
-    test(`languageSwitch - should switch language to ${languageSwitch.expectedLanguage}`, async ({
+    test(`languageSwitch - should switch language to ${languageSwitch.expectedLanguage}`, { tag: `@regression` }, async ({
       page,
     }) => {
       const languagePage = new LanguageSwitchPage(page);
