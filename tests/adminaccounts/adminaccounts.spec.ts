@@ -15,19 +15,19 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.navigateToAdminAccounts();
   });
 
-  test("sortAdmins - should sort admin accounts by name and email columns", async () => {
+  test("sortAdmins - should sort admin accounts by name and email columns", {tag: [`@smoke`, `@regression`]}, async () => {
     
     const { name, email } = adminAccountsData.sortColumns;
     await adminAccountsPage.sortByColumn(name);
     await adminAccountsPage.sortByColumn(email);
   });
 
-  test("filterAdmins - should filter admin accounts by all available roles", async () => {
+  test("filterAdmins - should filter admin accounts by all available roles", {tag: [`@smoke`, `@regression`]}, async () => {
     const { roleFilters } = adminAccountsData;
     await adminAccountsPage.applyRoleFilters(roleFilters);
   });
 
-  test("createSuperAdmin - should create super admin account", async () => {
+  test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -46,7 +46,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.verifyUserExists(uniqueEmail);
   });
 
-  test("deleteSuperAdmin - should delete super admin account", async () => {
+  test("deleteSuperAdmin - should delete super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -72,7 +72,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 
-  test("createRegionalAdmin - should create regional administrator with profile and label", async () => {
+  test("createRegionalAdmin - should create regional administrator with profile and label", {tag: [`@regression`]}, async () => {
     await adminAccountsPage.createProfile();
     await adminAccountsPage.createWiFiNetwork();
     await adminAccountsPage.createLabel();
@@ -104,7 +104,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.deleteWiFiNetwork();
   });
 
-  test("completeWorkflowAdmins - should perform complete workflow: sort, filter, create, and delete", async () => {
+  test("completeWorkflowAdmins - should perform complete workflow: sort, filter, create, and delete", {tag: [`@smoke`, `@regression`]}, async () => {
     const { sortColumns, roleFilters, users } = adminAccountsData;
 
     await adminAccountsPage.sortByColumn(sortColumns.name);
