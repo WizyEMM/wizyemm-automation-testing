@@ -119,7 +119,7 @@ test.describe("User CRUD Operations", () => {
   });
 });
 
-test("newWifi - create, search, update, and delete new Configuration Wi-Fi Networks wifi", async ({ page }) => {
+test("newWifi - create, search, update, and delete new Configuration Wi-Fi Networks wifi", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { wifi, navigation } = userConfigurationData;
 
@@ -169,7 +169,7 @@ test("bundledActions - create bundled action and add action", {tag: [`@smoke`, `
   await userConfigPage.addActionToBundledAction(bundledActions.actionType);
 });
 
-test("advancedSettings - togule manufacturer visibility in advanced settings page", async ({ page }) => {
+test("advancedSettings - toggle manufacturer visibility in advanced settings page", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 
