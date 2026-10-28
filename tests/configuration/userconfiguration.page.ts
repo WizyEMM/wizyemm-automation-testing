@@ -80,9 +80,9 @@ export class UserConfigurationPage {
       .click();
   }
 
-  async navigateToAdvanced() {
+  async navigateToOEMIntegration() {
     await this.page
-      .getByRole("link", { name: userConfigurationData.navigation.advanced })
+      .getByRole("link", { name: userConfigurationData.navigation.OEM })
       .click();
   }
 
