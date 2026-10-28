@@ -44,7 +44,7 @@ test.describe("Profile Application Tests", () => {
     }
   });
 
-  test("whiteRemove - Add and remove application from whitelist", async () => {
+  test("whiteRemove - FM Add and remove application from whitelist", async () => {
     profileName = generateUniqueProfileName("WhiteRemove");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -56,7 +56,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("installTypes - Cycle through install types", async () => {
+  test("installTypes - FM Cycle through install types", async () => {
     profileName = generateUniqueProfileName("InstallTypes");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -95,7 +95,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("disableApp - Toggle app disable state", async () => {
+  test("disableApp - FM Toggle app disable state", async () => {
     profileName = generateUniqueProfileName("DisableApp");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -107,7 +107,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("playStoreMode - Cycle through Play Store modes", async () => {
+  test("playStoreMode - FM Cycle through Play Store modes", async () => {
     profileName = generateUniqueProfileName("PlayStoreMode");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -139,7 +139,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("appConfig - Configure app settings", async () => {
+  test("appConfig - FM Configure app settings", async () => {
     profileName = generateUniqueProfileName("AppConfig");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -159,7 +159,7 @@ test.describe("Profile Application Tests", () => {
     expect(downloadTriggered).toBe(true);
   });
 
-  test("appPermissions - Cycle through permission states", async () => {
+  test("appPermissions - FM Cycle through permission states", async () => {
     profileName = generateUniqueProfileName("AppPermissions");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -177,7 +177,7 @@ test.describe("Profile Application Tests", () => {
     );
   });
 
-test.skip("appTrack - Cycle through app tracks", async () => {
+test.skip("appTrack - FM Cycle through app tracks", async () => {
     profileName = generateUniqueProfileName("AppTrack");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -216,7 +216,7 @@ test.skip("appTrack - Cycle through app tracks", async () => {
   });
 
 
-  test.skip("personalWhiteRemove - Single kiosk app management", async ({
+  test.skip("personalWhiteRemove - FM Single kiosk app management", async ({
     page,
   }) => {
     profileName = generateUniqueProfileName("PersonalWhiteRemove");
@@ -277,7 +277,7 @@ test.skip("appTrack - Cycle through app tracks", async () => {
     await personalApps.saveChanges();
   });
 
-  test("actionsAdvanced - Toggle advanced permissions", async () => {
+  test("actionsAdvanced - FM Toggle advanced permissions", async () => {
     profileName = generateUniqueProfileName("ActionsAdvanced");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
