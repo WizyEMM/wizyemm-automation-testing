@@ -36,7 +36,7 @@ test.describe("Profile Configuration Tests", () => {
     }
   });
 
-  test("configSwitches - Toggle configuration switches", async ({ page }) => {
+  test("configSwitches - Toggle configuration switches", {tag:[`@smoke`, `@regression`]}, async ({ page }) => {
     await configPage.navigateToConfiguration();
 
     await configPage.navigateToAdvancedFeatures();
@@ -62,7 +62,7 @@ test.describe("Profile Configuration Tests", () => {
     );
   });
 
-  test("locationMode - Cycle through location modes", async ({ page }) => {
+  test("locationMode - Cycle through location modes", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     await configPage.navigateToConfiguration();
 
     await configPage.ensureSwitchEnabled(
@@ -95,7 +95,7 @@ test.describe("Profile Configuration Tests", () => {
     expect([b, c, d, e, a]).toEqual(expectedModes);
   });
 
-  test("systemsUpdate - Cycle through system update policies", async ({
+  test("systemsUpdate - Cycle through system update policies", {tag: [`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     await configPage.navigateToConfiguration();
@@ -124,7 +124,7 @@ test.describe("Profile Configuration Tests", () => {
     expect([b, c, a]).toEqual(expectedModes);
   });
 
-  test("passwordConstraints - Cycle through password constraints", async ({
+  test("passwordConstraints - Cycle through password constraints", {tag: [`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     await configPage.navigateToConfiguration();
@@ -167,13 +167,13 @@ test.describe("Profile Configuration Tests", () => {
     expect([b, a]).toEqual(expectedModes);
   });
 
-  test("keyguardConfig - Setup keyguard configuration", async ({ page }) => {
+  test("keyguardConfig - Setup keyguard configuration", {tag:[`@smoke`, `@regression`]}, async ({ page }) => {
     await configPage.navigateToConfiguration();
     await configPage.navigateToSecuritySettings();
     await configPage.setupKeyguardConfiguration();
   });
 
-  test("factoryResetProtection - Add factory reset protection email", async ({
+test("factoryResetProtection - Add factory reset protection email", {tag:[`@smoke`, `@regressino`]}, async ({
     page,
   }) => {
     await configPage.navigateToConfiguration();
