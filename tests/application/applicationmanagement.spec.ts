@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
     await appMgmtPage.navigateToApplicationManagement();
 });
 
-test('addManagedApp - add a sideloaded app to the List of Applications', async ({ page }) => {
+test('addManagedApp - add a sideloaded app to the List of Applications', {tag: [`@smoke`,`@regression`]}, async ({ page }) => {
     const appMgmtPage = new ApplicationManagementPage(page);
     const appPackageName = generateAppPackageName();
 
@@ -26,7 +26,7 @@ test('addManagedApp - add a sideloaded app to the List of Applications', async (
     await appMgmtPage.removeManagedApplication(managedApp.rowName);
 });
 
-test('publicApps - search and click on public application', async ({ page }) => {
+test('publicApps - search and click on public application', {tag: [`@smoke`,`@regression`]}, async ({ page }) => {
     const appMgmtPage = new ApplicationManagementPage(page);
 
     await appMgmtPage.navigateToPublicApplications();
@@ -35,7 +35,7 @@ test('publicApps - search and click on public application', async ({ page }) => 
     await appMgmtPage.verifyPublicAppText(publicApp.expectedText);
 });
 
-test('webApps - add, verify, and delete new web app in Google play store', async ({ page }) => {
+test('webApps - add, verify, and delete new web app in Google play store', {tag: [`@smoke`,`@regression`]}, async ({ page }) => {
     const appMgmtPage = new ApplicationManagementPage(page);
 
     await appMgmtPage.navigateToWebApplications();
@@ -46,7 +46,7 @@ test('webApps - add, verify, and delete new web app in Google play store', async
     await appMgmtPage.verifyWebAppDeleted(webApp.title);
 });
 
-test('systemApps - sort system apps by name, package name, brand, and model', async ({ page }) => {
+test('systemApps - sort system apps by name, package name, brand, and model', {tag: [`@smoke`,`@regression`]}, async ({ page }) => {
     const appMgmtPage = new ApplicationManagementPage(page);
 
     await appMgmtPage.navigateToSystemApplications();
