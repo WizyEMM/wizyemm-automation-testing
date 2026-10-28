@@ -18,7 +18,7 @@ test.describe("Enrollment - Locale and Timezone Configuration", () => {
     enrollmentPage = new globalEnrollmentPage(page);
   });
 
-  test("should configure locale, timezone, and wifi settings for QR code", async () => {
+  test("should configure locale, timezone, and wifi settings for QR code", {tag: [`@smoke`,`@regression`]}, async () => {
     await enrollmentPage.navigateToEnrollment();
     await enrollmentPage.navigateToGlobalQRCode();
 
