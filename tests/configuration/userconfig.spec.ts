@@ -174,7 +174,7 @@ test("advancedSettings - toggle manufacturer visibility in advanced settings pag
   const { manufacturers } = userConfigurationData;
 
   await userConfigPage.navigateToConfiguration();
-  await userConfigPage.navigateToAdvanced();
+  await userConfigPage.navigateToOEMIntegration();
 
   for (const manufacturer of manufacturers) {
     await userConfigPage.toggleManufacturerVisibility(manufacturer);
