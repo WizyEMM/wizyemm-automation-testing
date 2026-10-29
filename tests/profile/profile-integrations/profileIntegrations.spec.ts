@@ -55,7 +55,7 @@ test.describe("Profile OEM Integrations", () => {
     }
   });
 
-  test("zebraIntegration - Configure and test Bluetooth settings", async ({
+  test("zebraIntegration - Configure and test Bluetooth settings", {tag: [`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     await integrationPage.navigateToTab("Zebra");
@@ -75,7 +75,7 @@ test.describe("Profile OEM Integrations", () => {
     await integrationPage.submitZebraConfiguration();
   });
 
-  test("datalogicIntegration - Toggle Bluetooth radio", async ({ page }) => {
+  test("datalogicIntegration - Toggle Bluetooth radio", {tag: [`@regression`]}, async ({ page }) => {
     await integrationPage.navigateToTab("Datalogic");
     await integrationPage.resetConfiguration();
     await integrationPage.saveConfiguration();
@@ -94,7 +94,7 @@ test.describe("Profile OEM Integrations", () => {
     await integrationPage.waitForUpdateSuccess();
   });
 
-  test("honeywellIntegration - Configure Bluetooth restrictions", async ({
+  test("honeywellIntegration - Configure Bluetooth restrictions", {tag: [`@regression`]}, async ({
     page,
   }) => {
     await integrationPage.navigateToTab("Honeywell");
