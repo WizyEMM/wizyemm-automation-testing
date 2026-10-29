@@ -32,7 +32,7 @@ test.describe("Profile Policies Tests", () => {
     }
   });
 
-  test("modifyFM - Fully Managed profile policies", async ({ page }) => {
+  test("modifyFM - Fully Managed profile policies", {tag:[`@regression`]}, async ({ page }) => {
     profileName = generateUniqueProfileName("PolicyFM");
 
     await profileMgmt.navigateToProfileManagement();
@@ -45,7 +45,7 @@ test.describe("Profile Policies Tests", () => {
     );
   });
 
-  test("modifyCOPE - COPE profile policies", async ({ page }) => {
+  test("modifyCOPE - COPE profile policies", {tag:[`@regression`]}, async ({ page }) => {
     profileName = generateUniqueProfileName("PolicyCOPE");
 
     await profileMgmt.navigateToProfileManagement();
@@ -65,7 +65,7 @@ test.describe("Profile Policies Tests", () => {
     );
   });
 
-  test("modifyBYOD - BYOD profile policies", async ({ page }) => {
+  test("modifyBYOD - BYOD profile policies", {tag:[`@regression`]}, async ({ page }) => {
     profileName = generateUniqueProfileName("PolicyBYOD");
 
     await profileMgmt.navigateToProfileManagement();
