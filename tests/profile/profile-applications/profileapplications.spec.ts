@@ -44,7 +44,7 @@ test.describe("Profile Application Tests", () => {
     }
   });
 
-  test("whiteRemove - FM Add and remove application from whitelist", async () => {
+  test("whiteRemove - FM Add and remove application from whitelist", {tag: [`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("WhiteRemove");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -56,7 +56,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("installTypes - FM Cycle through install types", async () => {
+  test("installTypes - FM Cycle through install types", {tag: [`@smoke`,`@regression`]}, async () => {
     profileName = generateUniqueProfileName("InstallTypes");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -95,7 +95,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("disableApp - FM Toggle app disable state", async () => {
+  test("disableApp - FM Toggle app disable state", {tag: [`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("DisableApp");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -107,7 +107,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("playStoreMode - FM Cycle through Play Store modes", async () => {
+  test("playStoreMode - FM Cycle through Play Store modes", {tag: [`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("PlayStoreMode");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -139,7 +139,7 @@ test.describe("Profile Application Tests", () => {
     await appsPage.saveChanges();
   });
 
-  test("appConfig - FM Configure app settings", async () => {
+  test("appConfig - FM Configure app settings", {tag:[`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("AppConfig");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -159,7 +159,7 @@ test.describe("Profile Application Tests", () => {
     expect(downloadTriggered).toBe(true);
   });
 
-  test("appPermissions - FM Cycle through permission states", async () => {
+  test("appPermissions - FM Cycle through permission states", {tag: [`@regression`]}, async () => {
     profileName = generateUniqueProfileName("AppPermissions");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -177,7 +177,7 @@ test.describe("Profile Application Tests", () => {
     );
   });
 
-test.skip("appTrack - FM Cycle through app tracks", async () => {
+test.skip("appTrack - FM Cycle through app tracks", {tag:[`@regression`]}, async () => {
     profileName = generateUniqueProfileName("AppTrack");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
@@ -216,7 +216,7 @@ test.skip("appTrack - FM Cycle through app tracks", async () => {
   });
 
 
-  test.skip("personalWhiteRemove - FM Single kiosk app management", async ({
+  test.skip("personalWhiteRemove - FM Single kiosk app management", {tag:[`@smoke`,`@regression`]}, async ({
     page,
   }) => {
     profileName = generateUniqueProfileName("PersonalWhiteRemove");
@@ -249,7 +249,7 @@ test.skip("appTrack - FM Cycle through app tracks", async () => {
     await profileMgmt.navigateToProfileManagement();
   });
 
-  test.skip("personalPlayStoreMode - COPE personal apps", async () => {
+  test.skip("personalPlayStoreMode - COPE personal apps", {tag:[`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("PersonalPlayStore");
 
     await profileMgmt.createProfile(
@@ -277,7 +277,7 @@ test.skip("appTrack - FM Cycle through app tracks", async () => {
     await personalApps.saveChanges();
   });
 
-  test("actionsAdvanced - FM Toggle advanced permissions", async () => {
+  test("actionsAdvanced - FM Toggle advanced permissions", {tag:[`@smoke`, `@regression`]}, async () => {
     profileName = generateUniqueProfileName("ActionsAdvanced");
 
     await profileMgmt.createProfile(profileName, ProfileData.profiles.type);
