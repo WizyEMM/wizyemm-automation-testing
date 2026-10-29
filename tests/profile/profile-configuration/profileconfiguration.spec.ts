@@ -173,7 +173,7 @@ test.describe("Profile Configuration Tests", () => {
     await configPage.setupKeyguardConfiguration();
   });
 
-test("factoryResetProtection - Add factory reset protection email", {tag:[`@smoke`, `@regressino`]}, async ({
+test("factoryResetProtection - Add factory reset protection email", {tag:[`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     await configPage.navigateToConfiguration();
