@@ -91,6 +91,27 @@ export class AdminAccountsPage {
       .locator(`a[id="${email}"]`).click();
   }
 
+  async updateProfile(firstName: string, lastName: string) {
+    await this.page
+      .getByRole("textbox", { name: "First Name :" })
+      .fill(firstName);
+
+    await this.page
+      .getByRole("textbox", { name: "Last Name :" })
+      .fill(lastName);
+
+    const responsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/administrators") &&
+        resp.status() === 200 &&
+        resp.request().method() === "PATCH"
+    );
+
+    await this.okButton.click();
+
+    const response = await responsePromise;
+  }
+
   async deleteProfile(): Promise<void> {
     await this.page
       .getByRole("link", {
