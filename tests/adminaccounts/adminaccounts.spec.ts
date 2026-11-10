@@ -44,6 +44,15 @@ test.describe("Admin Accounts Management", () => {
 
     await adminAccountsPage.searchUser(uniqueEmail);
     await adminAccountsPage.verifyUserExists(uniqueEmail);
+    await adminAccountsPage.selectUserByName(
+      superAdmin.firstName,
+      superAdmin.lastName
+    );
+    await adminAccountsPage.deleteSelectedUser();
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
+    
   });
 
   test("updateSuperAdmin - should update super admin account", async () => {
