@@ -86,6 +86,11 @@ export class AdminAccountsPage {
     await responsePromise;
   }
 
+  async pressProfile(email: string) {
+    await this.page
+      .locator(`a[id="${email}"]`).click();
+  }
+
   async deleteProfile(): Promise<void> {
     await this.page
       .getByRole("link", {
@@ -501,3 +506,4 @@ export class AdminAccountsPage {
       .nth(occurrence);
   }
 }
+
