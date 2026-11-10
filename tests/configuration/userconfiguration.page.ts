@@ -51,6 +51,26 @@ export class UserConfigurationPage {
   }
 
   async navigateToConfiguration(): Promise<void> {
+    const menu = this.page.locator("ul.ant-menu-root");
+    const menuItems = menu.locator(":scope > li");
+
+    // Wait for the main navigation menu to appear.
+    await menu.waitFor({
+      state: "visible",
+      timeout: 60_000,
+    });
+
+    // Wait for all expected top-level menu items to load.
+    await expect(menuItems).toHaveCount(15, {
+      timeout: 60_000,
+    });
+
+    // Confirm the menu items are visible.
+    for (let i = 0; i < 15; i++) {
+      await expect(menuItems.nth(i)).toBeVisible();
+    }
+
+    // Open Configuration only after the menu has loaded.
     await this.page
       .getByRole("menuitem", {
         name: userConfigurationData.navigation.configuration,
@@ -80,9 +100,9 @@ export class UserConfigurationPage {
       .click();
   }
 
-  async navigateToAdvanced() {
+  async navigateToOEMIntegration() {
     await this.page
-      .getByRole("link", { name: userConfigurationData.navigation.advanced })
+      .getByRole("link", { name: userConfigurationData.navigation.OEM })
       .click();
   }
 

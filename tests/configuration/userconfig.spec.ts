@@ -169,12 +169,12 @@ test("bundledActions - create bundled action and add action", {tag: [`@smoke`, `
   await userConfigPage.addActionToBundledAction(bundledActions.actionType);
 });
 
-test("advancedSettings - toggle manufacturer visibility in advanced settings page", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
+test("oemSettings - toggle manufacturer visibility in OEM Integration settings page", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 
   await userConfigPage.navigateToConfiguration();
-  await userConfigPage.navigateToAdvanced();
+  await userConfigPage.navigateToOEMIntegration();
 
   for (const manufacturer of manufacturers) {
     await userConfigPage.toggleManufacturerVisibility(manufacturer);
