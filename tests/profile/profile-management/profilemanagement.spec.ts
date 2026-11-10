@@ -329,7 +329,7 @@ test.describe.serial("Profile Management - Complete Test Suite", () => {
       console.log(`✅ Cleanup completed`);
     });
 
-    test("verifyCleanup - Confirm all test profiles are deleted", async ({
+    test("verifyCleanup - Confirm all test profiles are deleted", {tag: [`@smoke`, `@regression`]}, async ({
       page,
     }) => {
       await profileMgmt.navigateToProfileManagement();
