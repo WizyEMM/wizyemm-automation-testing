@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Fleet Management", () => {
-  test("refreshAndSort - Application Logs sorting and filtering", async ({
+  test("refreshAndSort - Application Logs sorting and filtering", {tag: ["smoke", "@regression"]} async ({
     page,
   }) => {
     const fleetPage = new fleetManagementPage(page);
