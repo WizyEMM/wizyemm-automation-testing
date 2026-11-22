@@ -25,11 +25,14 @@
   },
   "homepage": "https://bitbucket.org/Wizyio/wizyemm-automation-testing#readme",
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^24.10.9",
     "allure-commandline": "^2.34.1",
-    "allure-playwright": "^3.4.2",
+    "allure-playwright": "^3.15.0",
     "cross-env": "^7.0.3",
     "dotenv": "^17.2.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
