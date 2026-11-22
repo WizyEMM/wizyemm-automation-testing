@@ -86,19 +86,17 @@ export class AdminAccountsPage {
     await responsePromise;
   }
 
-  async pressProfile(email: string) {
-    await this.page
-      .locator(`a[id="${email}"]`).click();
+  async openAdminDetails(email: string) {
+    // Close the "Select fields to be searched" dropdown left open by searchUser.
+    await this.page.keyboard.press("Escape");
+    await waitForAdminTable(this.page);
+    await this.page.locator(`a[id="${email}"]`).click();
   }
 
-  async updateProfile(firstName: string, lastName: string) {
-    await this.page
-      .getByRole("textbox", { name: "First Name :" })
-      .fill(firstName);
-
-    await this.page
-      .getByRole("textbox", { name: "Last Name :" })
-      .fill(lastName);
+  async updateAdminName(firstName: string, lastName: string) {
+    await this.firstNameInput.waitFor({ state: "visible" });
+    await this.firstNameInput.fill(firstName);
+    await this.lastNameInput.fill(lastName);
 
     const responsePromise = this.page.waitForResponse(
       (resp) =>

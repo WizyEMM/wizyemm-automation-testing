@@ -64,13 +64,14 @@ test.describe("Admin Accounts Management", () => {
       email: uniqueEmail,
     };
 
-    const updatedName = { firstName: "update", lastName: "automationtest" };
+    const { updatedName } = superAdmin;
 
     await adminAccountsPage.createSuperAdmin(newUser);
 
     try {
-      await adminAccountsPage.pressProfile(uniqueEmail);
-      await adminAccountsPage.updateProfile(
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.openAdminDetails(uniqueEmail);
+      await adminAccountsPage.updateAdminName(
         updatedName.firstName,
         updatedName.lastName
       );
