@@ -7,6 +7,13 @@ export const userConfigurationData = {
     oemIntegration: "OEM Integration",
   },
 
+  paths: {
+    users: "/config/users",
+    wifiNetworks: "/config/wifi",
+    bundledActions: "/config/bundledactions",
+    oemIntegration: "/config/oem-integration",
+  },
+
   user: {
     firstName: "Play",
     lastName: "Wright",
