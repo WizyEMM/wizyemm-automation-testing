@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 test("userSort - sort users by types", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   await userConfigPage.navigateToUsers();
   await userConfigPage.sortUserColumns();
 
@@ -45,7 +45,7 @@ test.describe("User CRUD Operations", () => {
     await page.goto(`${config.baseUrl}/dashboard`);
     await expect(page).toHaveURL(/dashboard/);
     userConfigPage = new UserConfigurationPage(page);
-    await userConfigPage.navigateToConfiguration();
+    await userConfigPage.waitForSideMenu();
     await userConfigPage.navigateToUsers();
   });
 
@@ -123,7 +123,7 @@ test("newWifi - create, search, update, and delete new Configuration Wi-Fi Netwo
   const userConfigPage = new UserConfigurationPage(page);
   const { wifi, navigation } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   const wifiName = `${wifi.name}.${Math.random().toString(36).substring(2, 9)}`;
   const newWifiName = `${wifi.name}.${Math.random()
     .toString(36)
@@ -156,7 +156,7 @@ test("bundledActions - create bundled action and add action", {tag: [`@smoke`, `
   const userConfigPage = new UserConfigurationPage(page);
   const { bundledActions } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   const bundleName = `${bundledActions.name}.${Math.random()
     .toString(36)
     .substring(2, 9)}`;
@@ -173,7 +173,7 @@ test("oemSettings - toggle manufacturer visibility in OEM Integration settings p
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   await userConfigPage.navigateToOEMIntegration();
 
   for (const manufacturer of manufacturers) {

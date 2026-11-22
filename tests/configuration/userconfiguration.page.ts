@@ -56,7 +56,7 @@ export class UserConfigurationPage {
     });
   }
 
-  async navigateToConfiguration(): Promise<void> {
+  async waitForSideMenu(): Promise<void> {
     // Wait for the side menu to render. The submenu itself is opened by
     // openConfigurationPage(), because the app can collapse it again.
     await expect(this.configurationItem).toBeVisible({ timeout: 60_000 });
