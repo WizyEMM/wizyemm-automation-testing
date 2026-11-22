@@ -59,6 +59,7 @@ Thumbs.db
 
 # Env files
 .env*
+!.env.example
 
 # Local notes
 notes/
