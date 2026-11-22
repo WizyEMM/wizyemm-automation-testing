@@ -44,6 +44,53 @@ test.describe("Admin Accounts Management", () => {
 
     await adminAccountsPage.searchUser(uniqueEmail);
     await adminAccountsPage.verifyUserExists(uniqueEmail);
+    await adminAccountsPage.selectUserByEmail(uniqueEmail);
+    await adminAccountsPage.deleteSelectedUser();
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
+  });
+
+  test("updateSuperAdmin - should update super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
+    const { superAdmin } = adminAccountsData.users;
+
+    const uniqueEmail = adminAccountsPage.generateUniqueEmail(
+      superAdmin.emailPrefix,
+      superAdmin.emailDomain
+    );
+
+    const newUser = {
+      ...superAdmin,
+      email: uniqueEmail,
+    };
+
+    const { updatedName } = superAdmin;
+
+    await adminAccountsPage.createSuperAdmin(newUser);
+
+    try {
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.openAdminDetails(uniqueEmail);
+      await adminAccountsPage.updateAdminName(
+        updatedName.firstName,
+        updatedName.lastName
+      );
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.verifyUserName(
+        uniqueEmail,
+        updatedName.firstName,
+        updatedName.lastName
+      );
+    } finally {
+      // Always remove the account, even if the update steps fail.
+      await adminAccountsPage.navigateToAdminAccounts();
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.selectUserByEmail(uniqueEmail);
+      await adminAccountsPage.deleteSelectedUser();
+    }
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 
   test("deleteSuperAdmin - should delete super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
