@@ -4,7 +4,14 @@ export const userConfigurationData = {
     users: "Users",
     wifiNetworks: "Wi-Fi Networks",
     bundledActions: "Bundled Actions",
-    advanced: "Advanced",
+    oemIntegration: "OEM Integration",
+  },
+
+  paths: {
+    users: "/config/users",
+    wifiNetworks: "/config/wifi",
+    bundledActions: "/config/bundledactions",
+    oemIntegration: "/config/oem-integration",
   },
 
   user: {
@@ -32,9 +39,9 @@ export const userConfigurationData = {
   manufacturers: [
     "Show Datalogic",
     "Show Honeywell",
+    "Show M3 Mobile",
     "Show Samsung",
     "Show Urovo",
-    "Show Zebra",
   ],
 
   userTypes: {

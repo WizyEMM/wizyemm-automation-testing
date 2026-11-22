@@ -50,40 +50,68 @@ export class UserConfigurationPage {
     return this.page.getByRole("button", { name: "plus Add action" });
   }
 
-  async navigateToConfiguration(): Promise<void> {
-    await this.page
-      .getByRole("menuitem", {
-        name: userConfigurationData.navigation.configuration,
-      })
-      .click();
+  private get configurationItem() {
+    return this.page.getByRole("menuitem", {
+      name: userConfigurationData.navigation.configuration,
+    });
+  }
+
+  async waitForSideMenu(): Promise<void> {
+    // Wait for the side menu to render. The submenu itself is opened by
+    // openConfigurationPage(), because the app can collapse it again.
+    await expect(this.configurationItem).toBeVisible({ timeout: 60_000 });
+  }
+
+  /**
+   * The side menu re-renders shortly after load (extra items arrive), which
+   * collapses the Configuration submenu. Retry open + click until the URL
+   * shows we actually landed on the page.
+   */
+  private async openConfigurationPage(
+    linkName: string,
+    path: string
+  ): Promise<void> {
+    const link = this.page
+      .locator("ul.ant-menu-root")
+      .getByRole("link", { name: linkName, exact: true });
+
+    await expect(async () => {
+      if (
+        (await this.configurationItem.getAttribute("aria-expanded")) !== "true"
+      ) {
+        await this.configurationItem.click({ timeout: 5_000 });
+      }
+      await link.click({ timeout: 2_000 });
+      await expect(this.page).toHaveURL(new RegExp(`${path}(\\?|$)`), {
+        timeout: 5_000,
+      });
+    }).toPass({ timeout: 45_000 });
   }
 
   async navigateToUsers() {
-    await this.page
-      .getByRole("menuitem", { name: userConfigurationData.navigation.users })
-      .click();
+    const { navigation, paths } = userConfigurationData;
+    await this.openConfigurationPage(navigation.users, paths.users);
   }
 
   async navigateToWifiNetworks() {
-    await this.page
-      .getByRole("link", {
-        name: userConfigurationData.navigation.wifiNetworks,
-      })
-      .click();
+    const { navigation, paths } = userConfigurationData;
+    await this.openConfigurationPage(navigation.wifiNetworks, paths.wifiNetworks);
   }
 
   async navigateToBundledActions() {
-    await this.page
-      .getByRole("link", {
-        name: userConfigurationData.navigation.bundledActions,
-      })
-      .click();
+    const { navigation, paths } = userConfigurationData;
+    await this.openConfigurationPage(
+      navigation.bundledActions,
+      paths.bundledActions
+    );
   }
 
-  async navigateToAdvanced() {
-    await this.page
-      .getByRole("link", { name: userConfigurationData.navigation.advanced })
-      .click();
+  async navigateToOEMIntegration() {
+    const { navigation, paths } = userConfigurationData;
+    await this.openConfigurationPage(
+      navigation.oemIntegration,
+      paths.oemIntegration
+    );
   }
 
   async sortUserColumns() {
