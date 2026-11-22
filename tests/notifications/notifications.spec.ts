@@ -17,7 +17,7 @@ test.describe("Notification Settings", () => {
     await notificationsPage.navigateToNotifications();
   });
 
-  test("should configure notification settings and verify email frequency options", async () => {
+  test("notifEmailSettings - should configure notification settings and verify email frequency options", { tag: [`@smoke`, `@regression`] }, async () => {
     await notificationsPage.openConfiguration();
 
     await notificationsPage.toggleBellNotifications();
