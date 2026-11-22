@@ -38,7 +38,7 @@ test.describe("Profile Kiosk Tests", () => {
     }
   });
 
-  test.skip("kioskTracks - cycles through all track modes", async ({ page }) => {
+  test.skip("kioskTracks - cycles through all track modes", {tag: [`@regression`]}, async ({ page }) => {
     const cycleModes = ProfileData.kiosk.tracks;
 
     const results = await kioskPage.performMultipleCycles(
@@ -56,7 +56,7 @@ test.describe("Profile Kiosk Tests", () => {
     expect([b, c, d, a]).toEqual(expectedModes);
   });
 
-  test("kioskNavigationButtons - cycles through navigation button modes", async ({
+  test("kioskNavigationButtons - cycles through navigation button modes", {tag: [`@regression`]}, async ({
     page,
   }) => {
     const modes = ProfileData.kiosk.navigationButtons;
@@ -75,7 +75,7 @@ test.describe("Profile Kiosk Tests", () => {
     expect([b, c, a]).toEqual(expectedModes);
   });
 
-  test("kioskPowerButton - toggles power button availability", async ({
+  test("kioskPowerButton - toggles power button availability", {tag: [`@regression`]}, async ({
     page,
   }) => {
     const modes = ProfileData.kiosk.powerButton;
@@ -90,7 +90,7 @@ test.describe("Profile Kiosk Tests", () => {
     expect([b, a]).toEqual(expectedModes);
   });
 
-  test("kioskDisplayError - toggles display error messages", async ({
+  test("kioskDisplayError - toggles display error messages", {tag: [`@regression`]}, async ({
     page,
   }) => {
     const modes = ProfileData.kiosk.displayError;
@@ -105,7 +105,7 @@ test.describe("Profile Kiosk Tests", () => {
     expect([b, a]).toEqual(expectedModes);
   });
 
-  test("kioskStatusBarInfo - cycles through status bar information modes", async ({
+  test("kioskStatusBarInfo - cycles through status bar information modes", {tag:[`@smoke`,`@regression`]}, async ({
     page,
   }) => {
     const modes = ProfileData.kiosk.statusBarInfo;
@@ -124,7 +124,7 @@ test.describe("Profile Kiosk Tests", () => {
     expect([b, c, a]).toEqual(expectedModes);
   });
 
-  test("kioskDisplay - configures display settings with random values", async ({
+  test("kioskDisplay - configures display settings with random values", {tag:[`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     const randomColor = ProfileData.kiosk.generateRandomColor();

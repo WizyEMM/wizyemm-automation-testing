@@ -49,7 +49,7 @@ test.describe("User CRUD Operations", () => {
     await userConfigPage.navigateToUsers();
   });
 
-  test("createUser - should create a new user", async ({ page }) => {
+  test("createUser - should create a new user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -71,7 +71,7 @@ test.describe("User CRUD Operations", () => {
     await expect(page.getByText(uniqueUsername)).toBeVisible();
   });
 
-  test("updateUser - should update an existing user", async ({ page }) => {
+  test("updateUser - should update an existing user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -96,7 +96,7 @@ test.describe("User CRUD Operations", () => {
     );
   });
 
-  test("deleteUser - should delete a user", async ({ page }) => {
+  test("deleteUser - should delete a user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -119,7 +119,7 @@ test.describe("User CRUD Operations", () => {
   });
 });
 
-test("wifi", async ({ page }) => {
+test("newWifi - create, search, update, and delete new Configuration Wi-Fi Networks wifi", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { wifi, navigation } = userConfigurationData;
 
@@ -152,7 +152,7 @@ test("wifi", async ({ page }) => {
   await userConfigPage.refreshTable();
 });
 
-test("bundledActions", async ({ page }) => {
+test("bundledActions - create bundled action and add action", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { bundledActions } = userConfigurationData;
 
@@ -169,7 +169,7 @@ test("bundledActions", async ({ page }) => {
   await userConfigPage.addActionToBundledAction(bundledActions.actionType);
 });
 
-test("advancedSettings", async ({ page }) => {
+test("advancedSettings - toggle manufacturer visibility in advanced settings page", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 

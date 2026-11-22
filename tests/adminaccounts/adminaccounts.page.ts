@@ -108,8 +108,7 @@ export class AdminAccountsPage {
     );
 
     await this.okButton.click();
-
-    const response = await responsePromise;
+    await responsePromise;
   }
 
   async deleteProfile(): Promise<void> {
@@ -510,6 +509,17 @@ export class AdminAccountsPage {
     ).toBeVisible();
   }
 
+  async verifyUserName(
+    email: string,
+    firstName: string,
+    lastName: string
+  ): Promise<void> {
+    await waitForAdminTable(this.page);
+    await expect(
+      this.page.getByRole("row").filter({ hasText: email })
+    ).toContainText(`${firstName} ${lastName}`);
+  }
+
   async verifyUserNotExists(email: string): Promise<void> {
     await expect(this.page.getByText(email)).not.toBeVisible();
   }
@@ -527,4 +537,3 @@ export class AdminAccountsPage {
       .nth(occurrence);
   }
 }
-

@@ -27,7 +27,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.applyRoleFilters(roleFilters);
   });
 
-  test("createSuperAdmin - should create super admin account", async () => {
+  test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -44,48 +44,55 @@ test.describe("Admin Accounts Management", () => {
 
     await adminAccountsPage.searchUser(uniqueEmail);
     await adminAccountsPage.verifyUserExists(uniqueEmail);
-    await adminAccountsPage.selectUserByName(
-      superAdmin.firstName,
-      superAdmin.lastName
-    );
-    await adminAccountsPage.deleteSelectedUser();
-
-    await adminAccountsPage.refreshTable();
-    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
-    
-  });
-
-  test("updateSuperAdmin - should update super admin account", async () => {
-    const { superAdmin } = adminAccountsData.users;
-
-    const uniqueEmail = adminAccountsPage.generateUniqueEmail(
-      superAdmin.emailPrefix,
-      superAdmin.emailDomain
-    );
-
-    const newUser = {
-      ...superAdmin,
-      email: uniqueEmail,
-    };
-
-    await adminAccountsPage.createSuperAdmin(newUser);
-    await adminAccountsPage.pressProfile(uniqueEmail);
-    await adminAccountsPage.updateProfile(
-      "update",
-      "automationtest"
-    );
-    await adminAccountsPage.searchUser("automationtest");
-    await adminAccountsPage.verifyUserExists(uniqueEmail);
-
     await adminAccountsPage.selectUserByEmail(uniqueEmail);
-
     await adminAccountsPage.deleteSelectedUser();
+
     await adminAccountsPage.refreshTable();
     await adminAccountsPage.verifyUserNotExists(uniqueEmail);
-    
   });
 
-  test("deleteSuperAdmin - should delete super admin account", async () => {
+  test("updateSuperAdmin - should update super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
+    const { superAdmin } = adminAccountsData.users;
+
+    const uniqueEmail = adminAccountsPage.generateUniqueEmail(
+      superAdmin.emailPrefix,
+      superAdmin.emailDomain
+    );
+
+    const newUser = {
+      ...superAdmin,
+      email: uniqueEmail,
+    };
+
+    const updatedName = { firstName: "update", lastName: "automationtest" };
+
+    await adminAccountsPage.createSuperAdmin(newUser);
+
+    try {
+      await adminAccountsPage.pressProfile(uniqueEmail);
+      await adminAccountsPage.updateProfile(
+        updatedName.firstName,
+        updatedName.lastName
+      );
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.verifyUserName(
+        uniqueEmail,
+        updatedName.firstName,
+        updatedName.lastName
+      );
+    } finally {
+      // Always remove the account, even if the update steps fail.
+      await adminAccountsPage.navigateToAdminAccounts();
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.selectUserByEmail(uniqueEmail);
+      await adminAccountsPage.deleteSelectedUser();
+    }
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
+  });
+
+  test("deleteSuperAdmin - should delete super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -111,7 +118,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 
-  test("createRegionalAdmin - should create regional administrator with profile and label", {tag: [`@smoke`, `@regression`]}, async () => {
+  test("createRegionalAdmin - should create regional administrator with profile and label", {tag: [`@regression`]}, async () => {
     await adminAccountsPage.createProfile();
     await adminAccountsPage.createWiFiNetwork();
     await adminAccountsPage.createLabel();
@@ -168,4 +175,3 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 });
-

@@ -46,7 +46,7 @@ test.describe("Profile Enrollment Settings", () => {
     }
   });
 
-  test("configureSettingsAndRegenerateToken - should configure enrollment settings and regenerate token", async ({
+  test("configureSettingsAndRegenerateToken - should configure enrollment settings and regenerate token", {tag: [`@smoke`,`@regression`]}, async ({
     page,
   }) => {
     await profileManagementPage.createProfile(
@@ -68,7 +68,7 @@ test.describe("Profile Enrollment Settings", () => {
     await enrollmentPage.regenerateEnrollmentToken();
   });
 
-  test("configureDefaultEnrollment - should configure enrollment with default settings", async ({
+  test("configureDefaultEnrollment - should configure enrollment with default settings", {tag:[`@smoke`, `@regression`]}, async ({
     page,
   }) => {
     await profileManagementPage.createProfile(
