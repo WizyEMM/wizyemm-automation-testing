@@ -4,7 +4,7 @@ export const userConfigurationData = {
     users: "Users",
     wifiNetworks: "Wi-Fi Networks",
     bundledActions: "Bundled Actions",
-    OEM: "OEM Integration",
+    oemIntegration: "OEM Integration",
   },
 
   user: {

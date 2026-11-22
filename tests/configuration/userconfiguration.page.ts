@@ -51,31 +51,14 @@ export class UserConfigurationPage {
   }
 
   async navigateToConfiguration(): Promise<void> {
-    const menu = this.page.locator("ul.ant-menu-root");
-    const menuItems = menu.locator(":scope > li");
-
-    // Wait for the main navigation menu to appear.
-    await menu.waitFor({
-      state: "visible",
-      timeout: 60_000,
+    const configurationItem = this.page.getByRole("menuitem", {
+      name: userConfigurationData.navigation.configuration,
     });
 
-    // Wait for all expected top-level menu items to load.
-    await expect(menuItems).toHaveCount(15, {
-      timeout: 60_000,
-    });
-
-    // Confirm the menu items are visible.
-    for (let i = 0; i < 15; i++) {
-      await expect(menuItems.nth(i)).toBeVisible();
-    }
-
-    // Open Configuration only after the menu has loaded.
-    await this.page
-      .getByRole("menuitem", {
-        name: userConfigurationData.navigation.configuration,
-      })
-      .click();
+    // Wait for the menu to finish rendering before clicking.
+    await expect(configurationItem).toBeVisible({ timeout: 60_000 });
+    await expect(configurationItem).toBeEnabled();
+    await configurationItem.click();
   }
 
   async navigateToUsers() {
@@ -102,7 +85,7 @@ export class UserConfigurationPage {
 
   async navigateToOEMIntegration() {
     await this.page
-      .getByRole("link", { name: userConfigurationData.navigation.OEM })
+      .getByRole("link", { name: userConfigurationData.navigation.oemIntegration })
       .click();
   }
 
