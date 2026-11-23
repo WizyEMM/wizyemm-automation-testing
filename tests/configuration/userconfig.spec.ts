@@ -11,10 +11,10 @@ test.beforeEach(async ({ page }) => {
   await expect(page).toHaveURL(/dashboard/);
 });
 
-test("userSort", async ({ page }) => {
+test("userSort - sort users by types", async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   await userConfigPage.navigateToUsers();
   await userConfigPage.sortUserColumns();
 
@@ -45,11 +45,11 @@ test.describe("User CRUD Operations", () => {
     await page.goto(`${config.baseUrl}/dashboard`);
     await expect(page).toHaveURL(/dashboard/);
     userConfigPage = new UserConfigurationPage(page);
-    await userConfigPage.navigateToConfiguration();
+    await userConfigPage.waitForSideMenu();
     await userConfigPage.navigateToUsers();
   });
 
-  test("should create a new user", async ({ page }) => {
+  test("createUser - should create a new user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -71,7 +71,7 @@ test.describe("User CRUD Operations", () => {
     await expect(page.getByText(uniqueUsername)).toBeVisible();
   });
 
-  test("should update an existing user", async ({ page }) => {
+  test("updateUser - should update an existing user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -96,7 +96,7 @@ test.describe("User CRUD Operations", () => {
     );
   });
 
-  test("should delete a user", async ({ page }) => {
+  test("deleteUser - should delete a user", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const { user } = userConfigurationData;
     const uniqueUsername = `${user.username}.${Math.random()
       .toString(36)
@@ -119,11 +119,11 @@ test.describe("User CRUD Operations", () => {
   });
 });
 
-test("wifi", async ({ page }) => {
+test("newWifi - create, search, update, and delete new Configuration Wi-Fi Networks wifi", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { wifi, navigation } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   const wifiName = `${wifi.name}.${Math.random().toString(36).substring(2, 9)}`;
   const newWifiName = `${wifi.name}.${Math.random()
     .toString(36)
@@ -152,11 +152,11 @@ test("wifi", async ({ page }) => {
   await userConfigPage.refreshTable();
 });
 
-test("bundledActions", async ({ page }) => {
+test("bundledActions - create bundled action and add action", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { bundledActions } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
+  await userConfigPage.waitForSideMenu();
   const bundleName = `${bundledActions.name}.${Math.random()
     .toString(36)
     .substring(2, 9)}`;
@@ -169,12 +169,12 @@ test("bundledActions", async ({ page }) => {
   await userConfigPage.addActionToBundledAction(bundledActions.actionType);
 });
 
-test("advancedSettings", async ({ page }) => {
+test("oemSettings - toggle manufacturer visibility in OEM Integration settings page", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
   const userConfigPage = new UserConfigurationPage(page);
   const { manufacturers } = userConfigurationData;
 
-  await userConfigPage.navigateToConfiguration();
-  await userConfigPage.navigateToAdvanced();
+  await userConfigPage.waitForSideMenu();
+  await userConfigPage.navigateToOEMIntegration();
 
   for (const manufacturer of manufacturers) {
     await userConfigPage.toggleManufacturerVisibility(manufacturer);

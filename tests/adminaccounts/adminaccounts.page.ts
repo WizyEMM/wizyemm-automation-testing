@@ -86,6 +86,29 @@ export class AdminAccountsPage {
     await responsePromise;
   }
 
+  async openAdminDetails(email: string) {
+    // Close the "Select fields to be searched" dropdown left open by searchUser.
+    await this.page.keyboard.press("Escape");
+    await waitForAdminTable(this.page);
+    await this.page.locator(`a[id="${email}"]`).click();
+  }
+
+  async updateAdminName(firstName: string, lastName: string) {
+    await this.firstNameInput.waitFor({ state: "visible" });
+    await this.firstNameInput.fill(firstName);
+    await this.lastNameInput.fill(lastName);
+
+    const responsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/administrators") &&
+        resp.status() === 200 &&
+        resp.request().method() === "PATCH"
+    );
+
+    await this.okButton.click();
+    await responsePromise;
+  }
+
   async deleteProfile(): Promise<void> {
     await this.page
       .getByRole("link", {
@@ -482,6 +505,17 @@ export class AdminAccountsPage {
     await expect(
       this.page.getByRole("row").filter({ hasText: email })
     ).toBeVisible();
+  }
+
+  async verifyUserName(
+    email: string,
+    firstName: string,
+    lastName: string
+  ): Promise<void> {
+    await waitForAdminTable(this.page);
+    await expect(
+      this.page.getByRole("row").filter({ hasText: email })
+    ).toContainText(`${firstName} ${lastName}`);
   }
 
   async verifyUserNotExists(email: string): Promise<void> {

@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Fleet Management", () => {
-  test("refreshAndSort - Application Logs sorting and filtering", async ({
+  test("refreshAndSort - Application Logs sorting and filtering", {tag: ["@smoke", "@regression"]}, async ({
     page,
   }) => {
     const fleetPage = new fleetManagementPage(page);
@@ -31,7 +31,7 @@ test.describe("Fleet Management", () => {
     );
   });
 
-  test("geolocation - Search and label selection", async ({ page }) => {
+  test("geolocation - Search and label selection", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const fleetPage = new fleetManagementPage(page);
     const wifiName = `${geolocationData.wifiPrefix}.${Math.random()
       .toString(36)
@@ -52,7 +52,7 @@ test.describe("Fleet Management", () => {
     await fleetPage.deleteWiFiNetwork(wifiName);
   });
 
-  test("geofencing - Sorting and filtering zones", async ({ page }) => {
+  test("geofencing - Sorting and filtering zones", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {
     const fleetPage = new fleetManagementPage(page);
 
     await fleetPage.navigateToGeofencing();

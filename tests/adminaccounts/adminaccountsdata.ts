@@ -40,6 +40,10 @@ export const adminAccountsData = {
       emailDomain: "@gmail.com",
       password: "PLaywright123!",
       role: "Super Administrator",
+      updatedName: {
+        firstName: "update",
+        lastName: "automationtest",
+      },
     },
 
     regionalAdmin: {

@@ -15,19 +15,19 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.navigateToAdminAccounts();
   });
 
-  test("should sort admin accounts by name and email columns", async () => {
+  test("sortAdmins - should sort admin accounts by name and email columns", {tag: [`@smoke`, `@regression`]}, async () => {
     
     const { name, email } = adminAccountsData.sortColumns;
     await adminAccountsPage.sortByColumn(name);
     await adminAccountsPage.sortByColumn(email);
   });
 
-  test("should filter admin accounts by all available roles", async () => {
+  test("filterAdmins - should filter admin accounts by all available roles", {tag: [`@smoke`, `@regression`]}, async () => {
     const { roleFilters } = adminAccountsData;
     await adminAccountsPage.applyRoleFilters(roleFilters);
   });
 
-  test("should create super admin account", async () => {
+  test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -44,9 +44,56 @@ test.describe("Admin Accounts Management", () => {
 
     await adminAccountsPage.searchUser(uniqueEmail);
     await adminAccountsPage.verifyUserExists(uniqueEmail);
+    await adminAccountsPage.selectUserByEmail(uniqueEmail);
+    await adminAccountsPage.deleteSelectedUser();
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 
-  test("should delete super admin account", async () => {
+  test("updateSuperAdmin - should update super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
+    const { superAdmin } = adminAccountsData.users;
+
+    const uniqueEmail = adminAccountsPage.generateUniqueEmail(
+      superAdmin.emailPrefix,
+      superAdmin.emailDomain
+    );
+
+    const newUser = {
+      ...superAdmin,
+      email: uniqueEmail,
+    };
+
+    const { updatedName } = superAdmin;
+
+    await adminAccountsPage.createSuperAdmin(newUser);
+
+    try {
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.openAdminDetails(uniqueEmail);
+      await adminAccountsPage.updateAdminName(
+        updatedName.firstName,
+        updatedName.lastName
+      );
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.verifyUserName(
+        uniqueEmail,
+        updatedName.firstName,
+        updatedName.lastName
+      );
+    } finally {
+      // Always remove the account, even if the update steps fail.
+      await adminAccountsPage.navigateToAdminAccounts();
+      await adminAccountsPage.searchUser(uniqueEmail);
+      await adminAccountsPage.selectUserByEmail(uniqueEmail);
+      await adminAccountsPage.deleteSelectedUser();
+    }
+
+    await adminAccountsPage.refreshTable();
+    await adminAccountsPage.verifyUserNotExists(uniqueEmail);
+  });
+
+  test("deleteSuperAdmin - should delete super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
     const uniqueEmail = adminAccountsPage.generateUniqueEmail(
@@ -72,7 +119,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.verifyUserNotExists(uniqueEmail);
   });
 
-  test("should create regional administrator with profile and label", async () => {
+  test("createRegionalAdmin - should create regional administrator with profile and label", {tag: [`@regression`]}, async () => {
     await adminAccountsPage.createProfile();
     await adminAccountsPage.createWiFiNetwork();
     await adminAccountsPage.createLabel();
@@ -104,7 +151,7 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.deleteWiFiNetwork();
   });
 
-  test("should perform complete workflow: sort, filter, create, and delete", async () => {
+  test("completeWorkflowAdmins - should perform complete workflow: sort, filter, create, and delete", {tag: [`@smoke`, `@regression`]}, async () => {
     const { sortColumns, roleFilters, users } = adminAccountsData;
 
     await adminAccountsPage.sortByColumn(sortColumns.name);
