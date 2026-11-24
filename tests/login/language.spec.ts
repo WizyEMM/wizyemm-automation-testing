@@ -27,32 +27,15 @@ test.describe("Language Switching", () => {
       page,
     }) => {
       const languagePage = new LanguageSwitchPage(page);
-      
-      // If language is optional, check if it's available first
-      if (languageSwitch.isOptional) {
-        const isAvailable = await languagePage.isLanguageAvailable(
-          languageSwitch.toLanguageMenuItem
-        );
-        
-        // Skip test if optional language is not available
-        if (!isAvailable) {
-          test.skip();
-          return;
-        }
-      }
-      
       await languagePage.switchLanguageAndVerify(
         languageSwitch.fromLanguage,
         languageSwitch.toLanguageMenuItem,
         languageSwitch.expectedLanguage
       );
     });
-
-    test.afterEach(async ({ page }) => {
-      // Reset language back to English after each test
-      const languagePage = new LanguageSwitchPage(page);
-      await languagePage.resetLanguageToEnglish();
-    });
   }
+
+  // No afterEach reset: this config has no storageState, so every test starts
+  // in a fresh browser context with the default (English) language.
 });
 

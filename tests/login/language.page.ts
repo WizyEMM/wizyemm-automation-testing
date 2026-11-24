@@ -12,20 +12,11 @@ export class LanguageSwitch {
   }
 
   getLanguageButton(languageName: string): Locator {
-    return this.page.getByRole("button", { name: languageName });
- }
-
-  private getLanguageMenuItem(menuItemText: string): Locator {
-    return this.page.getByRole("menuitem", { name: menuItemText });
+    return this.page.getByRole("button", { name: languageName, exact: true });
   }
 
-  async isLanguageAvailable(languageMenuItem: string): Promise<boolean> {
-    try {
-      const menuItem = this.getLanguageMenuItem(languageMenuItem);
-      return await menuItem.isVisible({ timeout: 5000 });
-    } catch {
-      return false;
-    }
+  private getLanguageMenuItem(menuItemText: string): Locator {
+    return this.page.getByRole("menuitem", { name: menuItemText, exact: true });
   }
 
   async switchLanguage(
@@ -50,22 +41,18 @@ export class LanguageSwitch {
     await expect(this.getLanguageButton(languageName)).toBeVisible();
   }
 
+  /** The language dropdown trigger, found by its icon so it works in any language. */
+  getCurrentLanguageButton(): Locator {
+    return this.page.locator('button:has([data-icon="language"])');
+  }
+
+  /** Switches back to English if another language is active (no hardcoded language list). */
   async resetLanguageToEnglish() {
-    try {
-      // Get current language from button text content
-      const currentLangButton = this.page.locator('button').filter({ hasText: /^(English|Français|Bahasa Indonesia|日本語|Español|ไทย|Deutsch|中文)$/ }).first();
-      const currentLang = await currentLangButton.textContent();
-      
-      if (currentLang && currentLang !== "English") {
-        await this.switchLanguageAndVerify(
-          currentLang,
-          "English",
-          "English"
-        );
-      }
-    } catch (error) {
-      console.warn(`Failed to reset language to English: ${error}`);
-    }
+    const button = this.getCurrentLanguageButton();
+    if ((await button.innerText()).trim() === "English") return;
+    await button.click();
+    await this.getLanguageMenuItem("English").click();
+    await expect(button).toHaveText("English");
   }
 }
 
