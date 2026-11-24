@@ -3,6 +3,8 @@ import config from "../../utils/env";
 import { LanguageSwitchPage } from "./language.page";
 import { languageTestData } from "./languagedata";
 
+const isJamf = process.env.TEST_ENV === "jamf";
+
 test.describe.configure({ timeout: 60_000 });
 
 // STANDALONE TEST - Language switching on LOGIN PAGE (no login required)
@@ -27,32 +29,17 @@ test.describe("Language Switching", () => {
       page,
     }) => {
       const languagePage = new LanguageSwitchPage(page);
-      
-      // If language is optional, check if it's available first
-      if (languageSwitch.isOptional) {
-        const isAvailable = await languagePage.isLanguageAvailable(
-          languageSwitch.toLanguageMenuItem
-        );
-        
-        // Skip test if optional language is not available
-        if (!isAvailable) {
-          test.skip();
-          return;
-        }
-      }
-      
+      const expectedButtonLabel =
+        (isJamf && languageSwitch.jamfExpectedLanguage) || languageSwitch.expectedLanguage;
       await languagePage.switchLanguageAndVerify(
         languageSwitch.fromLanguage,
         languageSwitch.toLanguageMenuItem,
-        languageSwitch.expectedLanguage
+        expectedButtonLabel
       );
     });
-
-    test.afterEach(async ({ page }) => {
-      // Reset language back to English after each test
-      const languagePage = new LanguageSwitchPage(page);
-      await languagePage.resetLanguageToEnglish();
-    });
   }
+
+  // No afterEach reset: this config has no storageState, so every test starts
+  // in a fresh browser context with the default (English) language.
 });
 
