@@ -3,6 +3,8 @@ import config from "../../utils/env";
 import { LanguageSwitchPage } from "./language.page";
 import { languageTestData } from "./languagedata";
 
+const isJamf = process.env.TEST_ENV === "jamf";
+
 test.describe.configure({ timeout: 60_000 });
 
 // STANDALONE TEST - Language switching on LOGIN PAGE (no login required)
@@ -27,10 +29,12 @@ test.describe("Language Switching", () => {
       page,
     }) => {
       const languagePage = new LanguageSwitchPage(page);
+      const expectedButtonLabel =
+        (isJamf && languageSwitch.jamfExpectedLanguage) || languageSwitch.expectedLanguage;
       await languagePage.switchLanguageAndVerify(
         languageSwitch.fromLanguage,
         languageSwitch.toLanguageMenuItem,
-        languageSwitch.expectedLanguage
+        expectedButtonLabel
       );
     });
   }
