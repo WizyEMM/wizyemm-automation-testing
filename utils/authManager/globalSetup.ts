@@ -17,6 +17,8 @@ import {
 } from "./index";
 import * as fs from "fs";
 import * as path from "path";
+import { captureAdminApiSession, getAdminLanguage, setAdminLanguage, type AdminApiSession } from "../adminLanguage";
+import type { Page, Response } from "@playwright/test";
 
 /** Match npm scripts: `HEADLESS=false` opens a real browser; unset defaults to headless (e.g. CI). */
 function launchHeadless(): boolean {
@@ -30,6 +32,36 @@ const isJamf = process.env.TEST_ENV === JAMF_AUTH_ENV;
 const STORAGE_STATE_FILE = isJamf
   ? path.resolve(__dirname, "../../user/.auth/user-jamf.json")
   : path.resolve(__dirname, "../../user/.auth/user.json");
+
+/**
+ * Puts the shared admin account back to English if it isn't already. Waits for the app to
+ * finish loading first: on startup the app writes its own language back to the account,
+ * which would overwrite a PATCH sent too early. Never fails setup; only warns.
+ */
+async function resetAdminLanguageToEnglish(
+  page: Page,
+  adminApi: Promise<AdminApiSession>,
+  adminLoaded: Promise<Response | undefined>
+): Promise<void> {
+  try {
+    const session = await adminApi;
+    await adminLoaded;
+    await page.waitForTimeout(3000).catch(() => {}); // let the app's startup sync finish
+    const before = await getAdminLanguage(page, session);
+    if (before === "en") {
+      console.log(`✓ Admin language is English`);
+      return;
+    }
+    await setAdminLanguage(page, session, "en");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3000).catch(() => {});
+    const after = await getAdminLanguage(page, session);
+    if (after === "en") console.log(`✓ Admin language reset to English (was "${before}")`);
+    else console.warn(`⚠ Admin language is still "${after}" after reset`);
+  } catch (e) {
+    console.warn(`⚠ Could not reset admin language to English: ${e}`);
+  }
+}
 
 async function globalSetup(fullConfig: FullConfig) {
   console.log("\n🔐 GLOBAL SETUP: Starting authentication...\n");
@@ -110,8 +142,16 @@ async function globalSetup(fullConfig: FullConfig) {
       console.log(`✓ Navigated to base URL`);
       
       // Then navigate to dashboard to ensure full session establishment
+      const adminApi = captureAdminApiSession(page);
+      const adminLoaded = page
+        .waitForResponse((r) => r.url().includes("/administrators/me") && r.request().method() === "GET")
+        .catch(() => undefined);
       await page.goto(`${config.baseUrl}/dashboard`, { waitUntil: "domcontentloaded" });
       console.log(`✓ Navigated to dashboard`);
+
+      // Safety net: a previous run may have died mid-test and left the shared admin
+      // account in another language, which breaks every English text locator.
+      await resetAdminLanguageToEnglish(page, adminApi, adminLoaded);
       
       // Give the app a moment to fully populate localStorage after navigation
       await page.waitForTimeout(2000).catch(() => {});
