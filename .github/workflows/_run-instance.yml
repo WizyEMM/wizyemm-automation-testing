@@ -22,10 +22,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     environment: ${{ inputs.instance }}
+    # signed_url / report_version are NOT job outputs: they contain the instance
+    # path (e.g. jamf-prod-us/...), and GitHub silently drops any job output that
+    # contains a secret's value as a substring (e.g. REGION=us). They are passed
+    # to downstream jobs via the report-meta artifact instead.
     outputs:
       version: ${{ steps.run.outputs.version }}
-      signed_url: ${{ steps.gcs_upload.outputs.signed_url }}
-      report_version: ${{ steps.gcs_upload.outputs.report_version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -63,6 +65,24 @@ jobs:
           version: ${{ steps.run.outputs.version }}
           gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
           instance: ${{ inputs.instance }}
+
+      - name: Save report metadata
+        if: always()
+        env:
+          SIGNED_URL: ${{ steps.gcs_upload.outputs.signed_url }}
+          REPORT_VERSION: ${{ steps.gcs_upload.outputs.report_version }}
+        run: |
+          mkdir -p report-meta
+          printf '%s' "$SIGNED_URL" > report-meta/signed_url
+          printf '%s' "$REPORT_VERSION" > report-meta/report_version
+
+      - name: Upload report metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report-meta-${{ inputs.instance }}-${{ github.run_id }}
+          path: report-meta/
+          retention-days: 1
 
   # ============ INGEST TO WIZYREPORT ============
   ingest-to-wizy-report:
@@ -102,6 +122,14 @@ jobs:
             mkdir -p allure-results
           fi
 
+      - name: Download report metadata
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: report-meta-${{ inputs.instance }}-${{ github.run_id }}
+          path: report-meta
+
       - name: Ingest Test Results to WizyReport
         if: always()
         env:
@@ -112,9 +140,9 @@ jobs:
           ENVIRONMENT: ${{ (startsWith(inputs.instance, 'prod-') || startsWith(inputs.instance, 'jamf-prod')) && 'production' || 'staging' }}
           INSTANCE: ${{ inputs.instance }}
           EXECUTION_START_TIME: ${{ github.run_started_at }}
-          GCS_REPORT_VERSION: ${{ needs.test.outputs.report_version }}
           APP_VERSION: ${{ needs.test.outputs.version }}
         run: |
+          export GCS_REPORT_VERSION="$(cat report-meta/report_version 2>/dev/null || true)"
           echo "🚀 Starting WizyReport ingestion for instance: $INSTANCE"
           node scripts/wizy-report/ingestor.js
         continue-on-error: true
@@ -159,6 +187,14 @@ jobs:
             echo "⚠️ No allure-results artifact found"
           fi
 
+      - name: Download report metadata
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: report-meta-${{ inputs.instance }}-${{ github.run_id }}
+          path: report-meta
+
       - name: Send Test Report to Slack
         if: always()
         env:
@@ -167,9 +203,9 @@ jobs:
           INSTANCE: ${{ inputs.instance }}
           # Route the Slack channel by the instance's environment, not the git branch.
           REPORT_ENVIRONMENT: ${{ (startsWith(inputs.instance, 'prod-') || startsWith(inputs.instance, 'jamf-prod')) && 'production' || 'staging' }}
-          ALLURE_REPORT_URL: ${{ needs.test.outputs.signed_url }}
-          ALLURE_VERSION: ${{ needs.test.outputs.report_version }}
         run: |
+          export ALLURE_REPORT_URL="$(cat report-meta/signed_url 2>/dev/null || true)"
+          export ALLURE_VERSION="$(cat report-meta/report_version 2>/dev/null || true)"
           echo "🔍 Reporting for instance: $INSTANCE"
           npm install node-fetch
           node scripts/slack-reporter.js
