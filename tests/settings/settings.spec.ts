@@ -1,20 +1,31 @@
 import { test, expect } from "../_base/jamfTest";
 import config from "../../utils/env";
 import { SettingsPage } from "./settings.page";
+import { AdminApiSession, captureAdminApiSession, setAdminLanguage } from "../../utils/adminLanguage";
 import { languageCycle, generateUniqueGDPRData } from "./settingsdata";
 
 test.describe.configure({ timeout: 60_000 });
 
 test.describe("Personal Settings Tests", () => {
   let settingsPage: SettingsPage;
+  let adminApi: AdminApiSession | undefined;
 
   test.beforeEach(async ({ page }) => {
+    adminApi = undefined;
+    const session = captureAdminApiSession(page);
     // Navigate to dashboard to trigger auth from storageState
     await page.goto(`${config.baseUrl}/dashboard`);
+    adminApi = await session;
     await expect(page).toHaveURL(/dashboard/);
 
     settingsPage = new SettingsPage(page);
     await settingsPage.navigateToSettings();
+  });
+
+  test.afterEach(async ({ page }) => {
+    // The language is saved on the shared admin account. Always put it back to English
+    // (via the API, so it works even if the UI broke mid-test), or later tests fail.
+    if (adminApi) await setAdminLanguage(page, adminApi, "en");
   });
 
   test("settingsLanguageSwitching - should cycle through all available languages", {tag: [`@smoke`, `@regression`]}, async ({ page }) => {

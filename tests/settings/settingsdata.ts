@@ -1,10 +1,11 @@
+// Native names: the part of each option label that stays the same in every UI language.
 export const languages = {
-  FRENCH: "Français - French",
-  JAPANESE: "日本語 – Japonais",
-  SPANISH: "Español - スペイン語",
-  GERMAN: "Deutsch (alemán)",
-  CHINESE: "中文 – Chinesisch",
-  ENGLISH: "English - 英语",
+  FRENCH: "Français",
+  JAPANESE: "日本語",
+  SPANISH: "Español",
+  GERMAN: "Deutsch",
+  CHINESE: "繁體中文",
+  ENGLISH: "English",
 } as const;
 
 export const languageCycle = [

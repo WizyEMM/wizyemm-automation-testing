@@ -19,13 +19,9 @@ export class SettingsPage {
     this.page = page;
 
     this.personalSettingsHeader = page.getByText("Personal Settings");
-    this.languageDropdown = page
-      .locator("div")
-      .filter({
-        hasText:
-          /^(English|Français|日本語|Español|Deutsch|中文)$/,
-      })
-      .nth(2);
+    // Language is the first select in the Personal settings panel. Located by
+    // position in the panel, not by text: the heading and labels are translated.
+    this.languageDropdown = page.getByRole("tabpanel").locator(".ant-select").first();
     this.gdprSettingsTab = page.getByText("GDPR Settings");
     this.dataProtectionOfficerSection = page.getByText(
       "Data Protection Officer"
@@ -43,16 +39,26 @@ export class SettingsPage {
     await this.settingsIcon.click();
   }
 
-  async selectLanguage(language: string) {
+  /**
+   * Selects a language by its native name (e.g. "Français", "繁體中文").
+   * Option labels change with the current UI language ("Français - French" in English,
+   * "Français" in French), but always start with the native name.
+   */
+  async selectLanguage(nativeName: string) {
     await this.languageDropdown.click();
-    await this.page.getByText(language).click();
+    const option = this.page
+      .locator(".ant-select-dropdown:visible .ant-select-item-option")
+      .filter({ hasText: new RegExp(`^${escapeRegExp(nativeName)}(\\s|$)`) });
 
-    await this.page.waitForResponse(
+    // Listen before clicking so a fast response isn't missed.
+    const saved = this.page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/administrators/me") &&
-        resp.status() === 200 &&
         resp.request().method() === "PATCH"
     );
+    await option.click();
+    expect((await saved).status()).toBe(200);
+    await expect(this.languageDropdown).toHaveText(nativeName);
   }
 
   async cycleLanguages(languages: string[]) {
@@ -112,4 +118,8 @@ export class SettingsPage {
       euRepEmail: await this.euRepEmailInput.inputValue(),
     };
   }
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
