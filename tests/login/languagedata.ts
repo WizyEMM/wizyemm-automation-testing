@@ -18,7 +18,6 @@ export const languageTestData = {
       fromLanguage: "English",
       toLanguageMenuItem: "日本語 - Japanese",
       expectedLanguage: "日本語",
-      // Requested by a Japanese Jamf customer: Jamf shows "日本語 - 日本語" on the button.
       jamfExpectedLanguage: "日本語 - 日本語",
     },
     {
