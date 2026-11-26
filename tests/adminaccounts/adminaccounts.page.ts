@@ -7,6 +7,7 @@ import {
   waitForAdminTable,
   buildAdminEmail,
 } from "./adminaccounts.helpers";
+import { AdminAccountsPagination } from "./components/adminaccounts.pagination";
 
 /**
  * Admin Accounts: search/refresh GET 200, create POST 201, DELETE 5s + 200/204; navigate uses URL + table
@@ -24,6 +25,7 @@ export interface AdminUser {
 
 export class AdminAccountsPage {
   private readonly page: Page;
+  readonly pagination: AdminAccountsPagination;
 
   private readonly createButton: Locator;
   private readonly removeButton: Locator;
@@ -47,6 +49,7 @@ export class AdminAccountsPage {
 
   constructor(page: Page) {
     this.page = page;
+    this.pagination = new AdminAccountsPagination(page);
     this.createButton = page.getByRole("button", { name: "Create" });
     this.removeButton = page.getByRole("button", { name: "Remove" });
     this.refreshButton = page.getByRole("button", { name: "Refresh" });
