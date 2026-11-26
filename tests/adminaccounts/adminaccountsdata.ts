@@ -17,6 +17,11 @@ export const adminAccountsData = {
     email: "Email",
   },
 
+  pagination: {
+    defaultPageSize: 10,
+    pageSizeOptions: [10, 20, 30, 40],
+  },
+
   roleFilters: [
     "Super Administrator",
     "Administrator",

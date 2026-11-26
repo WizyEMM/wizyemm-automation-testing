@@ -27,6 +27,20 @@ test.describe("Admin Accounts Management", () => {
     await adminAccountsPage.applyRoleFilters(roleFilters);
   });
 
+  test("tablePagination - should display correct number of items per page", {tag: [`@smoke`, `@regression`]}, async () => {
+    const { defaultPageSize, pageSizeOptions } = adminAccountsData.pagination;
+    const { pagination } = adminAccountsPage;
+
+    await pagination.selectPageSize(defaultPageSize);
+    const total = await pagination.getTotalCount();
+
+    if (total <= defaultPageSize) {
+      await pagination.verifySinglePage(total, pageSizeOptions);
+    } else {
+      await pagination.verifyMultiPage(total, pageSizeOptions);
+    }
+  });
+
   test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
