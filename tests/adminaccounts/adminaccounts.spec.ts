@@ -7,7 +7,12 @@ import { adminAccountsData } from "./adminaccountsdata";
 test.describe("Admin Accounts Management", () => {
   let adminAccountsPage: AdminAccountsPage;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
+      process.env.TEST_ENV === "jamf" && testInfo.tags.includes("@noJamf"),
+      "Feature is not available on Jamf"
+    );
+
     // Navigate to dashboard to trigger auth from storageState
     await page.goto(`${config.baseUrl}/dashboard`);
     await expect(page).toHaveURL(/dashboard/);
@@ -39,6 +44,13 @@ test.describe("Admin Accounts Management", () => {
     } else {
       await pagination.verifyMultiPage(total, pageSizeOptions);
     }
+  });
+
+  test("contactUsAccessibility - User should be redirected to the support page to send a request / message", {tag: [`@smoke`, `@regression`, `@noJamf`]}, async () => {
+    await adminAccountsPage.verifyMfaBannerVisible();
+    const supportPage = await adminAccountsPage.openContactUs();
+    await adminAccountsPage.verifySupportPage(supportPage);
+    await supportPage.close();
   });
 
   test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {

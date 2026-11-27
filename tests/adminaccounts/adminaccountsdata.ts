@@ -22,6 +22,14 @@ export const adminAccountsData = {
     pageSizeOptions: [10, 20, 30, 40],
   },
 
+  contactUs: {
+    bannerText: "To activate multi-factor authentication (MFA) for your account",
+    linkName: "contact us",
+    supportUrl: /wizyemm\.com\/contact/,
+    supportHeading: "Contact WizyEMM",
+    messageFormHeading: "Send us a message",
+  },
+
   roleFilters: [
     "Super Administrator",
     "Administrator",
