@@ -53,6 +53,17 @@ test.describe("Admin Accounts Management", () => {
     await supportPage.close();
   });
 
+  test("refreshTable - User should be able to refresh the admin table", {tag: [`@smoke`, `@regression`]}, async () => {
+    const { defaultPageSize } = adminAccountsData.pagination;
+    const { pagination } = adminAccountsPage;
+
+    await pagination.selectPageSize(defaultPageSize);
+    const total = await pagination.getTotalCount();
+
+    await adminAccountsPage.refreshTable();
+    await pagination.verifyState(1, defaultPageSize, total);
+  });
+
   test("createSuperAdmin - should create super admin account", {tag: [`@smoke`, `@regression`]}, async () => {
     const { superAdmin } = adminAccountsData.users;
 
