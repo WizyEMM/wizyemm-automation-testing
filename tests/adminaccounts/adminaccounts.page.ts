@@ -525,6 +525,42 @@ export class AdminAccountsPage {
     await expect(this.page.getByText(email)).not.toBeVisible();
   }
 
+  // ---------- MFA banner / Contact us ----------
+
+  private get mfaBanner(): Locator {
+    return this.page
+      .getByRole("alert")
+      .filter({ hasText: adminAccountsData.contactUs.bannerText });
+  }
+
+  async verifyMfaBannerVisible(): Promise<void> {
+    await expect(this.mfaBanner).toBeVisible();
+  }
+
+  /** Clicks "contact us" in the MFA banner and returns the support page, which opens in a new tab. */
+  async openContactUs(): Promise<Page> {
+    const [supportPage] = await Promise.all([
+      this.page.waitForEvent("popup"),
+      this.mfaBanner
+        .getByRole("link", { name: adminAccountsData.contactUs.linkName })
+        .click(),
+    ]);
+    await supportPage.waitForLoadState("domcontentloaded");
+    return supportPage;
+  }
+
+  async verifySupportPage(supportPage: Page): Promise<void> {
+    const { supportUrl, supportHeading, messageFormHeading } = adminAccountsData.contactUs;
+
+    await expect(supportPage).toHaveURL(supportUrl);
+    await expect(
+      supportPage.getByRole("heading", { name: supportHeading, level: 1 })
+    ).toBeVisible();
+    await expect(
+      supportPage.getByRole("heading", { name: messageFormHeading })
+    ).toBeVisible();
+  }
+
   generateUniqueEmail(prefix: string, domain: string): string {
     return buildAdminEmail(prefix, domain);
   }
